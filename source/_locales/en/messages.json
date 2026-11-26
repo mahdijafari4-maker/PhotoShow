@@ -366,10 +366,6 @@
     "message": "<td>C</td><td>Copy HD image address</td>",
     "description": "Hotkey name and its operation description."
   },
-  "hotkey_openVideoInNewTab": {
-    "message": "<td>Shift + V</td><td>Open video under the mouse in new tab</td>",
-    "description": "Hotkey description in the popup page."
-  },
   "videoControlsHeader": {
     "message": "VIDEO CONTROLS",
     "description": "Popup section header."

@@ -582,9 +582,6 @@
         },
         copyImageAddress: {
           isEnabled: true
-        },
-        openVideoInNewTab: {
-          isEnabled: true
         }
       }
     },
@@ -707,10 +704,6 @@
                     !(e.ctrlKey && e.shiftKey) &&
                     !isActiveElementAnInput ||
                   eventKey === 'S' && photoShow.config.hotkeys.saveImage.isEnabled && !isActiveElementAnInput ||
-                  (eventKey === 'V' || e.code === 'KeyV') &&
-                    e.shiftKey &&
-                    photoShow.config.hotkeys.openVideoInNewTab.isEnabled &&
-                    !isActiveElementAnInput ||
                   eventKey === (photoShow.config.activationMode || '').toUpperCase()) &&
                 ((!isActiveElementAnInput && !window.getSelection().toString()) || hasImgShown)
               ) {
@@ -823,7 +816,6 @@
     isViewerChanged: true, // Indicates if the displaying features of the image viewer changes frome last time it was displayed.
     prevViewerDisplayFeatures: null, // Displaying features of the image viewer when it displayed last time.
     curTrigger: null, // Element that triggers image preview.
-    hoveredVideo: null, // Video element currently under the mouse pointer (for the video hotkey).
     imgSrc: '', // Src for the high-definition image (can be either a string or a Promise object).
     preservedImg: {
       src: '', // Src can be either a string or a Promise object.
@@ -1897,22 +1889,6 @@
 
       const eventKey = e.key?.toUpperCase();
 
-      // Open the video under the mouse in a new tab (Shift + V, layout-independent via 'e.code').
-      if (
-        e.code === 'KeyV' &&
-        e.shiftKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !e.metaKey &&
-        photoShow.config.hotkeys.openVideoInNewTab.isEnabled &&
-        !this.isActiveElementAnInput &&
-        !window.getSelection().toString() &&
-        this.hoveredVideo
-      ) {
-        e.preventDefault();
-        this.openVideoInNewTabAction();
-      }
-
       switch (eventKey) {
         case 'TAB':
           photoShow.config.hotkeys.openImageInNewTab.isEnabled &&
@@ -2078,26 +2054,6 @@
     winBlurAction: function () {
       this.isModifierKeyDown = false;
     },
-    openVideoInNewTabAction: function () {
-      const video = this.hoveredVideo;
-
-      if (video && video.ownerDocument?.contains(video)) {
-        const videoSrc =
-          video.currentSrc ||
-          video.src ||
-          [...video.querySelectorAll('source[src]')]
-            .filter(source => video.canPlayType(source.type || ''))
-            .at(-1)?.src ||
-          video.poster ||
-          '';
-
-        videoSrc &&
-          chrome.runtime.sendMessage({
-            cmd: 'OPEN_VIDEO_IN_NEW_TAB',
-            args: { videoSrc: new URL(videoSrc, location.origin).href }
-          });
-      }
-    },
     domMutateAction: function (mutations) {
       // Some websites update images only by changing their src attributes instead of replacing the whole img elements,
       // which could cause problems when the triggers have had their high-definition image srcs cached.
@@ -2231,21 +2187,16 @@
       }
     });
 
-    // Track the video element under the mouse pointer for the video hotkey (Shift + V).
-    document.addEventListener(
-      'mousemove',
-      e => (photoShowViewer.hoveredVideo = e.target?.closest?.('video') || null),
-      {
-        passive: true
-      }
-    );
-
     // Video control bar for playing videos (e.g. Civitai video previews).
-    // Modes: 'auto' (default) shows the bar only for videos without native player controls;
-    // 'always' replaces the native controls; 'off' disables the bar. (See popup settings.)
+    // Modes (popup 'VIDEO CONTROLS' settings): 'auto' (default) shows the bar only for videos
+    // without native player controls; 'always' replaces the native controls; 'off' disables it.
+    // While paused, the full bar fades out and only a small play badge stays visible.
+    // Nothing plays without an explicit user action, the last played video wins (the others
+    // pause), and the sound of the video being played is enabled automatically.
     (() => {
       const SEEK_SECONDS = 5,
         SPEEDS = [1, 1.25, 1.5, 2, 0.5],
+        OVERLAY_SIZES = ['fit', 1, 0.75, 0.5],
         videoBars = new Map(),
         resolveVideoSrc = video =>
           (
@@ -2259,7 +2210,7 @@
           ).trim(),
         formatTime = seconds => {
           if (!Number.isFinite(seconds)) {
-            return '\u2013:\u2013\u2013';
+            return '–:––';
           }
 
           const h = Math.floor(seconds / 3600),
@@ -2272,12 +2223,105 @@
       const controlMode = () =>
         !photoShow.config.videoControls ? 'off' : photoShow.config.videoControlsReplace ? 'always' : 'auto';
 
-      const buildBar = video => {
+      const markUserPlay = video => (video.dataset.photoshowUserPlay = '1');
+      const markUserPlaying = video => (video.dataset.photoshowUserPlaying = '1');
+      const consumeUserPlay = video => {
+        if (video.dataset.photoshowUserPlay) {
+          delete video.dataset.photoshowUserPlay;
+
+          return true;
+        }
+
+        return false;
+      };
+
+      // --- Centered overlay player (fit / real size / percentages). ---
+      let overlay = null;
+
+      const applyOverlaySize = () => {
+        if (!overlay) {
+          return;
+        }
+
+        const size = OVERLAY_SIZES[overlay.sizeIdx],
+          video = overlay.video;
+
+        if (size === 'fit' || !video.videoWidth) {
+          video.style.width = '';
+          video.style.height = '';
+          video.style.maxWidth = '92vw';
+          video.style.maxHeight = '88vh';
+        } else {
+          video.style.maxWidth = '';
+          video.style.maxHeight = '';
+          video.style.width = `${Math.round(video.videoWidth * size)}px`;
+          video.style.height = `${Math.round(video.videoHeight * size)}px`;
+        }
+
+        overlay.controls && overlay.controls.position();
+      };
+
+      const closeOverlay = () => {
+        if (!overlay) {
+          return;
+        }
+
+        const { root, video, sourceVideo, controls } = overlay;
+
+        sourceVideo &&
+          sourceVideo.isConnected &&
+          ((sourceVideo.style.visibility = ''), (sourceVideo.currentTime = video.currentTime));
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        controls.destroy();
+        root.remove();
+        overlay = null;
+      };
+
+      const openOverlay = sourceVideo => {
+        const videoSrc = resolveVideoSrc(sourceVideo);
+
+        closeOverlay();
+
+        if (!videoSrc) {
+          return;
+        }
+
+        const root = document.createElement('div'),
+          video = document.createElement('video');
+
+        root.className = 'photoShow photoshow-video-overlay';
+        root.style.cssText =
+          'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
+        video.style.cssText = 'position:relative;background:#000;border-radius:4px;max-width:92vw;max-height:88vh;';
+        video.src = videoSrc;
+        root.appendChild(video);
+        document.documentElement.appendChild(root);
+
+        overlay = { root, video, sourceVideo, sizeIdx: 0 };
+        overlay.controls = buildBar(video, { overlay: true, fixed: true, container: root });
+
+        // Pause and hide the in-page video: only one video plays at a time.
+        sourceVideo.pause();
+        sourceVideo.style.visibility = 'hidden';
+
+        root.addEventListener('click', event => event.target === root && closeOverlay());
+        video.addEventListener('loadedmetadata', applyOverlaySize);
+
+        video.currentTime = sourceVideo.currentTime || 0;
+        markUserPlaying(video);
+        video.muted = false;
+        video.play().catch(() => {});
+      };
+
+      const buildBar = (video, opts = {}) => {
         const bar = document.createElement('div');
+        let playBadge = null;
 
         bar.className = 'photoShow photoshow-video-controls';
         bar.style.cssText =
-          'position:absolute;display:flex;flex-direction:column;gap:3px;z-index:2147483646;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);border-radius:8px;padding:5px 8px 6px;box-sizing:border-box;color:#fff;font:12px/1.2 sans-serif;user-select:none;min-width:180px;';
+          'position:absolute;display:flex;flex-direction:column;gap:3px;z-index:2147483646;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);border-radius:8px;padding:5px 8px 6px;box-sizing:border-box;color:#fff;font:12px/1.2 sans-serif;user-select:none;min-width:180px;transition:opacity 0.25s;';
 
         // --- Timeline row. ---
         const timelineRow = document.createElement('div');
@@ -2286,7 +2330,7 @@
 
         const timeLabel = document.createElement('span');
 
-        timeLabel.textContent = '0:00 / \u2013:\u2013\u2013';
+        timeLabel.textContent = '0:00 / –:––';
         timeLabel.style.cssText = 'font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9;';
 
         const timeline = document.createElement('div');
@@ -2330,16 +2374,23 @@
           return button;
         };
 
-        const playButton = makeButton(video.paused ? '\u25B6' : '\u23F8', 'Play / Pause', () =>
-          video.paused ? video.play().catch(() => {}) : video.pause()
-        );
+        const playButton = makeButton(video.paused ? '▶' : '⏸', 'Play / Pause', () => {
+          if (video.paused) {
+            markUserPlay(video);
+            markUserPlaying(video);
+            video.muted = false;
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
+        });
 
         makeButton(
-          '\u23EA',
+          '⏪',
           `Back ${SEEK_SECONDS}s`,
           () => (video.currentTime = Math.max(0, video.currentTime - SEEK_SECONDS))
         );
-        makeButton('\u23E9', `Forward ${SEEK_SECONDS}s`, () => (video.currentTime += SEEK_SECONDS));
+        makeButton('⏩', `Forward ${SEEK_SECONDS}s`, () => (video.currentTime += SEEK_SECONDS));
 
         const sep = document.createElement('span');
 
@@ -2347,11 +2398,9 @@
         sep.style.cssText = 'opacity:0.35;padding:0 2px;';
         buttonsRow.appendChild(sep);
 
-        const muteButton = makeButton(
-          video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}',
-          'Mute / Unmute',
-          () => (video.muted = !video.muted)
-        );
+        const muteButton = makeButton(video.muted || !video.volume ? '🔇' : '🔊', 'Mute / Unmute', () => {
+          video.muted = !video.muted;
+        });
 
         const volumeSlider = document.createElement('input');
 
@@ -2369,14 +2418,33 @@
         volumeSlider.addEventListener('pointerdown', event => event.stopPropagation());
         buttonsRow.appendChild(volumeSlider);
 
-        const speedButton = makeButton(`${video.playbackRate}\u00d7`, 'Playback speed', () => {
+        const speedButton = makeButton(`${video.playbackRate}×`, 'Playback speed', () => {
           const idx = SPEEDS.indexOf(video.playbackRate);
 
           video.playbackRate = SPEEDS[(idx + 1) % SPEEDS.length] || 1;
-          speedButton.textContent = `${video.playbackRate}\u00d7`;
+          speedButton.textContent = `${video.playbackRate}×`;
         });
 
-        makeButton('\u2197', 'Open in new tab', () => {
+        if (opts.overlay) {
+          // Size cycler for the centered overlay player (fit / real size / percentages).
+          const sizeLabel = () => {
+            const size = OVERLAY_SIZES[overlay?.sizeIdx ?? 0];
+
+            return size === 'fit' ? '⤢ Fit' : `⤢ ${Math.round(size * 100)}%`;
+          };
+
+          const sizeButton = makeButton(sizeLabel(), 'Display size: fit / real size / percentages', () => {
+            if (overlay) {
+              overlay.sizeIdx = (overlay.sizeIdx + 1) % OVERLAY_SIZES.length;
+              applyOverlaySize();
+              sizeButton.textContent = sizeLabel();
+            }
+          });
+        } else {
+          makeButton('⤢', 'Play in real size (centered)', () => openOverlay(video));
+        }
+
+        makeButton('↗', 'Open in new tab', () => {
           const videoSrc = resolveVideoSrc(video);
 
           videoSrc &&
@@ -2385,7 +2453,7 @@
               args: { videoSrc: new URL(videoSrc, location.origin).href }
             });
         });
-        makeButton('\u2B07', 'Download video', () => {
+        makeButton('⬇', 'Download video', () => {
           const videoSrc = resolveVideoSrc(video);
 
           videoSrc &&
@@ -2394,7 +2462,7 @@
               args: { imgSrc: new URL(videoSrc, location.origin).href, imgTitle: video.title || '' }
             });
         });
-        makeButton('\u26F6', 'Fullscreen', () => {
+        makeButton('⛶', 'Fullscreen', () => {
           if (document.fullscreenElement === video) {
             document.exitFullscreen();
           } else {
@@ -2404,7 +2472,27 @@
         });
 
         bar.append(timelineRow, buttonsRow);
-        document.documentElement.appendChild(bar);
+        (opts.container || document.documentElement).appendChild(bar);
+
+        if (!opts.overlay) {
+          // Small play badge shown in the center of the video while it is paused.
+          playBadge = document.createElement('div');
+
+          playBadge.className = 'photoShow photoshow-video-play-badge';
+          playBadge.textContent = '▶';
+          playBadge.title = 'Play';
+          playBadge.style.cssText =
+            'position:absolute;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;font-size:18px;cursor:pointer;z-index:2147483645;user-select:none;transition:opacity 0.25s;opacity:0;pointer-events:none;';
+          playBadge.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            markUserPlay(video);
+            markUserPlaying(video);
+            video.muted = false;
+            video.play().catch(() => {});
+          });
+          document.documentElement.appendChild(playBadge);
+        }
 
         const syncTime = () => {
           timeLabel.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
@@ -2414,19 +2502,36 @@
             (timelineBuffer.style.width = `${(video.buffered.end(video.buffered.length - 1) / video.duration) * 100}%`);
         };
         const syncVolume = () => {
-          muteButton.textContent = video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}';
+          muteButton.textContent = video.muted || !video.volume ? '🔇' : '🔊';
           volumeSlider.value = video.muted ? 0 : video.volume;
+        };
+        const syncVisibility = () => {
+          // The full bar is visible only while playing (or in replace mode); a small
+          // play badge stays visible when paused so playback can be started again.
+          const showFull = opts.overlay || controlMode() === 'always' || !video.paused;
+
+          bar.style.opacity = showFull ? '1' : '0';
+          bar.style.pointerEvents = showFull ? 'auto' : 'none';
+
+          playBadge &&
+            ((playBadge.style.opacity = showFull ? '0' : '1'),
+            (playBadge.style.pointerEvents = showFull ? 'none' : 'auto'));
         };
         const position = () => {
           const rect = video.getBoundingClientRect();
 
           if (video.isConnected && rect.width && rect.height) {
             bar.style.display = 'flex';
-            bar.style.left = `${rect.left + window.scrollX + rect.width / 2 - bar.offsetWidth / 2}px`;
+            bar.style.left = `${(opts.fixed ? rect.left : rect.left + window.scrollX) + rect.width / 2 - bar.offsetWidth / 2}px`;
+            bar.style.top = `${(opts.fixed ? rect.top : rect.top + window.scrollY) + rect.height - bar.offsetHeight - 8}px`;
             bar.style.width = `${Math.max(rect.width, 180)}px`;
-            bar.style.top = `${rect.top + window.scrollY + rect.height - bar.offsetHeight - 6}px`;
+
+            playBadge &&
+              ((playBadge.style.left = `${(opts.fixed ? rect.left : rect.left + window.scrollX) + rect.width / 2 - 22}px`),
+              (playBadge.style.top = `${(opts.fixed ? rect.top : rect.top + window.scrollY) + rect.height / 2 - 22}px`));
           } else {
             bar.remove();
+            playBadge && playBadge.remove();
           }
         };
 
@@ -2457,37 +2562,111 @@
         video.addEventListener('loadedmetadata', syncTime);
         video.addEventListener('durationchange', syncTime);
         video.addEventListener('progress', syncTime);
-        video.addEventListener('play', () => (playButton.textContent = '\u23F8'));
-        video.addEventListener('pause', () => (playButton.textContent = '\u25B6'));
+        video.addEventListener('play', () => {
+          syncVisibility();
+          playButton.textContent = '⏸';
+        });
+        video.addEventListener('pause', () => {
+          video.currentTime > 1 &&
+            video.currentTime < (video.duration || Infinity) - 1 &&
+            (video.dataset.photoshowPausedAt = video.currentTime);
+          delete video.dataset.photoshowUserPlaying;
+          syncVisibility();
+          playButton.textContent = '▶';
+        });
         video.addEventListener('volumechange', syncVolume);
+
+        // Keep the bar glued to the video when its size changes.
+        const ro = new ResizeObserver(() => position());
+
+        ro.observe(video);
 
         position();
         setTimeout(position, 300); // In case the video size settles late.
         setTimeout(syncTime, 100);
-        videoBars.set(video, { bar, position });
+
+        return {
+          bar,
+          position,
+          syncTime,
+          syncVisibility,
+          destroy: () => {
+            ro.disconnect();
+            bar.remove();
+            playBadge && playBadge.remove();
+          }
+        };
       };
+
+      // Playback policy: nothing plays without an explicit user action, the last played video
+      // wins (all the others pause), and its sound is enabled automatically.
+      document.addEventListener(
+        'play',
+        e => {
+          const video = e.target;
+
+          if (video?.tagName !== 'VIDEO' || video.closest('.photoshow-video-overlay')) {
+            return;
+          }
+
+          const userInitiated = consumeUserPlay(video);
+
+          if (!userInitiated && !video.controls) {
+            // Site-initiated autoplay: stop it to save bandwidth.
+            video.pause();
+
+            return;
+          }
+
+          // Resume from the saved position if it restarted from the beginning.
+          const savedAt = +video.dataset.photoshowPausedAt || 0;
+
+          if (savedAt > 1 && video.currentTime < 1) {
+            video.currentTime = savedAt;
+          }
+
+          userInitiated && (video.muted = false);
+          videoBars.forEach((info, other) => other !== video && !other.paused && other.pause());
+        },
+        true
+      );
+
+      document.addEventListener(
+        'keydown',
+        e => {
+          if (e.key === 'Escape' && overlay) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeOverlay();
+          }
+        },
+        true
+      );
 
       const sweep = () => {
         const mode = controlMode();
 
         if (mode !== 'off') {
           document.querySelectorAll('video').forEach(video => {
-            if (videoBars.has(video)) {
+            if (videoBars.has(video) || video.closest('.photoshow-video-overlay')) {
               return;
             }
 
             if (mode === 'always') {
               video.controls = false; // Replace the native player controls with the PhotoShow bar.
-              buildBar(video);
-            } else if (!video.controls && !video.paused) {
-              buildBar(video); // Only for videos that have no native player controls.
+            } else if (video.controls) {
+              return; // Videos with their own player controls are left untouched.
             }
+
+            // Bandwidth saving: stop playback that was not initiated via the bar.
+            !video.paused && !video.dataset.photoshowUserPlaying && video.pause();
+            videoBars.set(video, buildBar(video));
           });
         }
 
         videoBars.forEach((info, video) => {
           if (mode === 'off' || !video.isConnected || !info.bar.isConnected) {
-            info.bar.remove();
+            info.destroy();
             videoBars.delete(video);
           }
         });
