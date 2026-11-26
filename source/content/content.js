@@ -2296,7 +2296,7 @@
         root.style.cssText =
           'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,0.85);display:flex;overflow:auto;';
         video.style.cssText =
-          'position:relative;margin:auto;background:#000;border-radius:4px;max-width:98vw;max-height:98vh;';
+          'position:relative;margin:auto;background:#000;border-radius:0;max-width:98vw;max-height:98vh;';
         video.src = videoSrc;
         root.appendChild(video);
         document.documentElement.appendChild(root);
@@ -2325,30 +2325,36 @@
             ? video.parentElement
             : document.documentElement;
         const bar = document.createElement('div');
-        let playBadge = null;
+        let playBadge = null,
+          pointerOnVideo = false;
 
         bar.className = 'photoShow photoshow-video-controls';
         bar.style.cssText =
-          'position:absolute;direction:ltr;display:flex;flex-direction:column;gap:2px;z-index:2147483646;background:rgba(0,0,0,0.4);backdrop-filter:blur(5px);border-radius:10px;padding:6px 10px 7px;box-sizing:border-box;color:#fff;font:13px/1.2 sans-serif;user-select:none;min-width:200px;transition:opacity 0.25s;';
+          'position:absolute;direction:ltr;display:flex;flex-direction:column;gap:2px;z-index:2147483646;background:rgba(0,0,0,0.55);backdrop-filter:blur(5px);box-sizing:border-box;color:#fff;font:13px/1.2 sans-serif;user-select:none;transition:opacity 0.25s;';
+
+        // Popovers stay open until another control-bar button is pressed.
+        const popups = [];
+
+        const closePops = () => popups.forEach(pop => (pop.style.display = 'none'));
 
         // --- Timeline row: current time (left) / seek bar / total time (right). ---
         const timelineRow = document.createElement('div');
 
-        timelineRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        timelineRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 10px 0;';
 
         const timeCur = document.createElement('span');
 
         timeCur.textContent = '0:00';
-        timeCur.style.cssText = 'font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9;min-width:40px;';
+        timeCur.style.cssText = 'font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9;min-width:42px;';
 
         const timeline = document.createElement('div');
 
-        timeline.style.cssText = 'position:relative;flex:1;height:16px;display:flex;align-items:center;cursor:pointer;';
+        timeline.style.cssText = 'position:relative;flex:1;height:18px;display:flex;align-items:center;cursor:pointer;';
 
         const timelineTrack = document.createElement('div');
 
         timelineTrack.style.cssText =
-          'position:relative;width:100%;height:5px;border-radius:3px;background:rgba(255,255,255,0.25);overflow:hidden;';
+          'position:relative;width:100%;height:5px;background:rgba(255,255,255,0.25);overflow:hidden;';
 
         const timelineBuffer = document.createElement('div');
 
@@ -2363,21 +2369,21 @@
         const timeTotal = document.createElement('span');
 
         timeTotal.textContent = '\u2013:\u2013\u2013';
-        timeTotal.style.cssText = 'font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9;min-width:40px;text-align:right;';
+        timeTotal.style.cssText = 'font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9;min-width:42px;text-align:right;';
         timelineRow.append(timeCur, timeline, timeTotal);
 
-        // --- Controls row: [-5s] [play] [+5s] on the left; popovers + download + fullscreen on the right. ---
+        // --- Controls row: volume + back on the left, play centered, forward + menu + fullscreen on the right. ---
         const controlsRow = document.createElement('div');
 
-        controlsRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:4px;';
+        controlsRow.style.cssText = 'position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 6px 4px;';
 
         const leftGroup = document.createElement('div');
 
-        leftGroup.style.cssText = 'display:flex;align-items:center;gap:2px;';
+        leftGroup.style.cssText = 'display:flex;align-items:center;gap:1px;';
 
         const rightGroup = document.createElement('div');
 
-        rightGroup.style.cssText = 'display:flex;align-items:center;gap:2px;';
+        rightGroup.style.cssText = 'display:flex;align-items:center;gap:1px;';
         controlsRow.append(leftGroup, rightGroup);
 
         const makeButton = (label, title, action, group = leftGroup) => {
@@ -2386,12 +2392,13 @@
           button.textContent = label;
           button.title = title;
           button.style.cssText =
-            'cursor:pointer;padding:4px 10px;border-radius:6px;font-size:15px;line-height:1.2;transition:background 0.15s;';
+            'cursor:pointer;padding:5px 11px;font-size:16px;line-height:1.2;transition:background 0.15s;';
           button.addEventListener('mouseenter', () => (button.style.background = 'rgba(255,255,255,0.15)'));
           button.addEventListener('mouseleave', () => (button.style.background = ''));
           button.addEventListener('click', event => {
             event.preventDefault();
             event.stopPropagation();
+            closePops();
             action();
           });
           group.appendChild(button);
@@ -2410,109 +2417,112 @@
           }
         });
 
+        // Play stays exactly in the middle of the controls row (KMPlayer style).
+        playButton.style.position = 'absolute';
+        playButton.style.left = '50%';
+        playButton.style.top = '50%';
+        playButton.style.transform = 'translate(-50%,-50%)';
+
         makeButton(
-          '\u23EA',
+          '\u276F',
           `Back ${SEEK_SECONDS}s`,
           () => (video.currentTime = Math.max(0, video.currentTime - SEEK_SECONDS))
         );
-        makeButton('\u23E9', `Forward ${SEEK_SECONDS}s`, () => (video.currentTime += SEEK_SECONDS));
 
-        // Hidden pop-open popovers (hover or click) to save space in the controls row.
-        const attachPopover = (button, build) => {
-          const pop = document.createElement('div');
+        // Volume: the first button from the left; opens a horizontal volume bar with the mute
+        // button underneath. It stays open until another control-bar button is pressed.
+        const volumePop = document.createElement('div');
 
-          pop.style.cssText =
-            'position:absolute;bottom:34px;left:50%;transform:translateX(-50%);display:none;flex-direction:column;gap:6px;align-items:center;padding:10px 12px;background:rgba(20,20,20,0.95);border:1px solid rgba(255,255,255,0.15);border-radius:8px;white-space:nowrap;';
-          build(pop);
-          pop.addEventListener('click', event => event.stopPropagation());
-          pop.addEventListener('pointerdown', event => event.stopPropagation());
-          button.style.position = 'relative';
-          button.appendChild(pop);
+        volumePop.style.cssText =
+          'position:absolute;bottom:100%;left:0;display:none;flex-direction:column;gap:8px;padding:10px;background:rgba(20,20,20,0.97);border:1px solid rgba(255,255,255,0.2);z-index:10;';
 
-          let hideTimer = null;
+        const volumeSlider = document.createElement('input');
 
-          button.addEventListener('mouseenter', () => {
-            clearTimeout(hideTimer);
-            pop.style.display = 'flex';
-          });
-          button.addEventListener('mouseleave', () => (hideTimer = setTimeout(() => (pop.style.display = 'none'), 300)));
-          pop.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-          pop.addEventListener('mouseleave', () => (hideTimer = setTimeout(() => (pop.style.display = 'none'), 300)));
-          button.addEventListener('click', () => {
-            pop.style.display = pop.style.display === 'flex' ? 'none' : 'flex';
-          });
-        };
+        volumeSlider.type = 'range';
+        volumeSlider.min = 0;
+        volumeSlider.max = 1;
+        volumeSlider.step = 0.05;
+        volumeSlider.value = video.muted ? 0 : video.volume;
+        volumeSlider.style.cssText = 'width:150px;accent-color:#ff2f70;cursor:pointer;';
+        volumeSlider.addEventListener('input', () => {
+          video.muted = false;
+          video.volume = +volumeSlider.value;
+        });
+        volumeSlider.addEventListener('pointerdown', event => event.stopPropagation());
 
-        // Volume (mute + slider) inside a popover.
-        const muteButton = makeButton(video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}', 'Volume', () => {}, rightGroup);
+        const muteToggle = document.createElement('div');
 
-        attachPopover(muteButton, pop => {
-          const row = document.createElement('div');
+        muteToggle.textContent = video.muted ? '\u{1F50A} Unmute' : '\u{1F507} Mute';
+        muteToggle.style.cssText = 'cursor:pointer;padding:2px 4px;transition:background 0.15s;text-align:center;';
+        muteToggle.addEventListener('mouseenter', () => (muteToggle.style.background = 'rgba(255,255,255,0.15)'));
+        muteToggle.addEventListener('mouseleave', () => (muteToggle.style.background = ''));
+        muteToggle.addEventListener('click', () => (video.muted = !video.muted));
+        video.addEventListener('volumechange', () => {
+          volumeButton.textContent = video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}';
+          volumeSlider.value = video.muted ? 0 : video.volume;
+          muteToggle.textContent = video.muted ? '\u{1F50A} Unmute' : '\u{1F507} Mute';
+        });
+        volumePop.append(volumeSlider, muteToggle);
 
-          row.style.cssText = 'display:flex;align-items:center;gap:8px;';
-
-          const toggle = document.createElement('span');
-
-          toggle.style.cssText = 'cursor:pointer;';
-
-          const slider = document.createElement('input');
-
-          slider.type = 'range';
-          slider.min = 0;
-          slider.max = 1;
-          slider.step = 0.05;
-          slider.value = video.muted ? 0 : video.volume;
-          slider.style.cssText = 'width:110px;accent-color:#ff2f70;cursor:pointer;';
-          slider.addEventListener('input', () => {
-            video.muted = false;
-            video.volume = +slider.value;
-          });
-          slider.addEventListener('pointerdown', event => event.stopPropagation());
-
-          const syncMute = () => (toggle.textContent = video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}');
-
-          toggle.addEventListener('click', () => (video.muted = !video.muted));
-          video.addEventListener('volumechange', () => {
-            syncMute();
-            slider.value = video.muted ? 0 : video.volume;
-          });
-          syncMute();
-          row.append(toggle, slider);
-          pop.appendChild(row);
+        const volumeButton = makeButton(video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}', 'Volume', () => {
+          volumePop.style.display = volumePop.style.display === 'flex' ? 'none' : 'flex';
         });
 
-        // Display size: menu in the overlay player; opens the overlay player on page videos.
-        if (opts.overlay) {
-          const sizeButton = makeButton('\u2922', 'Display size', () => {}, rightGroup);
+        volumePop.addEventListener('click', event => event.stopPropagation());
+        volumePop.addEventListener('pointerdown', event => event.stopPropagation());
+        bar.appendChild(volumePop);
+        popups.push(volumePop);
 
-          attachPopover(sizeButton, pop => {
-            [
-              ['fit', 'Fit browser'],
-              [1, '100% (real size)'],
-              [1.5, '150%'],
-              [2, '200%']
-            ].forEach(([value, label]) => {
-              const option = document.createElement('div');
+        makeButton('\u276E', `Forward ${SEEK_SECONDS}s`, () => (video.currentTime += SEEK_SECONDS), rightGroup);
 
-              option.textContent = label;
-              option.style.cssText = 'cursor:pointer;padding:4px 8px;border-radius:5px;transition:background 0.15s;';
-              option.addEventListener('mouseenter', () => (option.style.background = 'rgba(255,255,255,0.15)'));
-              option.addEventListener('mouseleave', () => (option.style.background = ''));
-              option.addEventListener('click', () => {
-                overlay && ((overlay.size = value), applyOverlaySize());
-                pop.style.display = 'none';
-              });
-              pop.appendChild(option);
-            });
+        // --- Three-dot menu with selectable submenus. ---
+        const menu = document.createElement('div');
+
+        menu.style.cssText =
+          'position:absolute;bottom:100%;right:0;display:none;flex-direction:column;min-width:230px;background:rgba(20,20,20,0.97);border:1px solid rgba(255,255,255,0.2);z-index:10;';
+
+        const addMenuItem = (label, contentBuilder) => {
+          const item = document.createElement('div');
+
+          item.style.cssText = 'cursor:pointer;padding:7px 12px;transition:background 0.15s;';
+          item.addEventListener('mouseenter', () => (item.style.background = 'rgba(255,255,255,0.15)'));
+          item.addEventListener('mouseleave', () => (item.style.background = ''));
+
+          const arrow = document.createElement('span');
+
+          arrow.textContent = '\u25B8';
+          arrow.style.cssText = 'float:right;opacity:0.7;';
+          item.append(document.createTextNode(label), arrow);
+
+          const panel = document.createElement('div');
+
+          panel.style.cssText = 'display:none;padding:8px 12px;background:rgba(255,255,255,0.06);';
+          contentBuilder(panel);
+          item.addEventListener('click', event => {
+            event.stopPropagation();
+            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
           });
-        } else {
-          makeButton('\u2922', 'Play in real size (centered)', () => openOverlay(video), rightGroup);
-        }
+          panel.addEventListener('click', event => event.stopPropagation());
+          menu.append(item, panel);
+        };
 
-        // Playback speed: 0.5x - 4x slider inside a popover.
-        const speedButton = makeButton(`${video.playbackRate}\u00d7`, 'Playback speed', () => {}, rightGroup);
+        const addActionItem = (label, action) => {
+          const item = document.createElement('div');
 
-        attachPopover(speedButton, pop => {
+          item.textContent = label;
+          item.style.cssText = 'cursor:pointer;padding:7px 12px;transition:background 0.15s;';
+          item.addEventListener('mouseenter', () => (item.style.background = 'rgba(255,255,255,0.15)'));
+          item.addEventListener('mouseleave', () => (item.style.background = ''));
+          item.addEventListener('click', event => {
+            event.stopPropagation();
+            closePops();
+            action();
+          });
+          menu.appendChild(item);
+        };
+
+        // Speed: 0.5x - 4x slider.
+        addMenuItem('Speed', panel => {
           const row = document.createElement('div');
 
           row.style.cssText = 'display:flex;align-items:center;gap:8px;';
@@ -2524,27 +2534,113 @@
           slider.max = 4;
           slider.step = 0.25;
           slider.value = video.playbackRate;
-          slider.style.cssText = 'width:140px;accent-color:#ff2f70;cursor:pointer;';
+          slider.style.cssText = 'flex:1;accent-color:#ff2f70;cursor:pointer;';
           slider.addEventListener('pointerdown', event => event.stopPropagation());
 
           const label = document.createElement('span');
 
           label.textContent = `${video.playbackRate}\u00d7`;
-          label.style.cssText = 'min-width:40px;text-align:center;';
-          slider.addEventListener('input', () => {
-            video.playbackRate = +slider.value;
-            label.textContent = `${slider.value}\u00d7`;
-            speedButton.textContent = `${slider.value}\u00d7`;
-          });
+          label.style.cssText = 'min-width:40px;text-align:right;';
+          slider.addEventListener('input', () => (video.playbackRate = +slider.value));
           video.addEventListener('ratechange', () => {
             label.textContent = `${video.playbackRate}\u00d7`;
-            speedButton.textContent = `${video.playbackRate}\u00d7`;
           });
           row.append(slider, label);
-          pop.appendChild(row);
+          panel.appendChild(row);
         });
 
-        makeButton('\u2B07', 'Download video', () => {
+        // Resolution: the available renditions of the video (probed through the background),
+        // switching without losing the playback position.
+        addMenuItem('Resolution', panel => {
+          const currentSrc = resolveVideoSrc(video),
+            infoLine = document.createElement('div');
+
+          infoLine.style.cssText = 'opacity:0.8;';
+          infoLine.textContent = 'Checking available renditions\u2026';
+          panel.appendChild(infoLine);
+
+          if (!/width=[^,/$]+/i.test(currentSrc)) {
+            infoLine.textContent = 'Only the original rendition is available.';
+
+            return;
+          }
+
+          const switchTo = newSrc => {
+            const wasPlaying = !video.paused,
+              time = video.currentTime;
+
+            markUserPlay(video);
+            markUserPlaying(video);
+            video.src = newSrc;
+            video.addEventListener(
+              'loadedmetadata',
+              () => {
+                video.currentTime = time;
+              },
+              { once: true }
+            );
+            wasPlaying ? video.play().catch(() => {}) : video.load();
+            closePops();
+          };
+
+          let pending = 0;
+
+          ['width=original', 'width=1080', 'width=720', 'width=450'].forEach(width => {
+            const url = currentSrc.replace(/width=[^,/$]+/i, width);
+
+            if (url === currentSrc) {
+              return;
+            }
+
+            pending += 1;
+
+            chrome.runtime.sendMessage({ cmd: 'PROBE_VIDEO', args: { videoSrc: url } }, info => {
+              const sizeHeader = info?.size,
+                match = sizeHeader && String(sizeHeader).match(/\/(\d+)/),
+                size = match ? +match[1] : +sizeHeader || 0;
+
+              if (info && info.ok !== false && size) {
+                const row = document.createElement('div');
+
+                row.textContent = `${width.replace('width=', 'width ')} \u2014 ${(size / 1048576).toFixed(1)} MB`;
+                row.style.cssText = 'cursor:pointer;padding:3px 4px;transition:background 0.15s;';
+                row.addEventListener('mouseenter', () => (row.style.background = 'rgba(255,255,255,0.15)'));
+                row.addEventListener('mouseleave', () => (row.style.background = ''));
+                row.addEventListener('click', () => switchTo(url));
+                panel.appendChild(row);
+              }
+
+              if (--pending === 0 && !panel.querySelector('.photoshow-res-row')) {
+                infoLine.textContent = 'Only the original rendition is available.';
+              }
+            });
+          });
+        });
+
+        opts.overlay
+          ? addMenuItem('Display size', panel => {
+              [
+                ['fit', 'Fit browser'],
+                [1, '100% (real size)'],
+                [1.5, '150%'],
+                [2, '200%']
+              ].forEach(([value, label]) => {
+                const row = document.createElement('div');
+
+                row.textContent = label;
+                row.style.cssText = 'cursor:pointer;padding:3px 4px;transition:background 0.15s;';
+                row.addEventListener('mouseenter', () => (row.style.background = 'rgba(255,255,255,0.15)'));
+                row.addEventListener('mouseleave', () => (row.style.background = ''));
+                row.addEventListener('click', () => {
+                  overlay && ((overlay.size = value), applyOverlaySize());
+                  closePops();
+                });
+                panel.appendChild(row);
+              });
+            })
+          : addActionItem('Play in real size (centered)', () => openOverlay(video));
+
+        addActionItem('Download video', () => {
           const videoSrc = resolveVideoSrc(video);
 
           videoSrc &&
@@ -2552,6 +2648,23 @@
               cmd: 'DOWNLOAD_IMG',
               args: { imgSrc: new URL(videoSrc, location.origin).href, imgTitle: video.title || '' }
             });
+        });
+        addActionItem('Open in new tab', () => {
+          const videoSrc = resolveVideoSrc(video);
+
+          videoSrc &&
+            chrome.runtime.sendMessage({
+              cmd: 'OPEN_VIDEO_IN_NEW_TAB',
+              args: { videoSrc: new URL(videoSrc, location.origin).href }
+            });
+        });
+
+        menu.addEventListener('click', event => event.stopPropagation());
+        bar.appendChild(menu);
+        popups.push(menu);
+
+        const menuButton = makeButton('\u22EF', 'More options', () => {
+          menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
         }, rightGroup);
 
         makeButton('\u26F6', 'Fullscreen', () => {
@@ -2572,21 +2685,12 @@
 
           playBadge.className = 'photoShow photoshow-video-play-badge';
           playBadge.textContent = '\u25B6';
-          playBadge.title = 'Hover to play (or click)';
+          playBadge.title = 'Hover to play (1s) or click';
           playBadge.style.cssText =
-            'position:absolute;display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,0.65);backdrop-filter:blur(3px);color:#fff;font-size:19px;cursor:pointer;z-index:2147483645;user-select:none;transition:opacity 0.25s;opacity:0;pointer-events:none;';
+            'position:absolute;display:flex;align-items:center;justify-content:center;width:46px;height:46px;background:rgba(0,0,0,0.65);color:#fff;font-size:19px;cursor:pointer;z-index:2147483645;user-select:none;transition:opacity 0.25s;opacity:0;pointer-events:none;';
           host.appendChild(playBadge);
 
-          let pointerOnVideo = false,
-            badgeHoverTimer = null;
-
-          video.addEventListener('mouseenter', () => (pointerOnVideo = true));
-          video.addEventListener('mouseleave', () => (pointerOnVideo = false));
-          playBadge.addEventListener('mouseenter', () => (pointerOnVideo = true));
-          playBadge.addEventListener('mouseleave', () => {
-            pointerOnVideo = false;
-            clearTimeout(badgeHoverTimer);
-          });
+          let badgeHoverTimer = null;
 
           const startPlayback = () => {
             markUserPlay(video);
@@ -2595,11 +2699,17 @@
             video.play().catch(() => {});
           };
 
-          // Play after hovering the badge for about a second (avoids mis-clicks on sites
-          // where clicking a video opens a new page). Clicking the badge plays immediately.
-          playBadge.addEventListener('pointerenter', () => (badgeHoverTimer = setTimeout(startPlayback, 1000)));
+          video.addEventListener('mouseenter', () => (pointerOnVideo = true));
+          video.addEventListener('mouseleave', () => (pointerOnVideo = false));
+          playBadge.addEventListener('mouseenter', () => {
+            pointerOnVideo = true;
+            badgeHoverTimer = setTimeout(startPlayback, 1000);
+          });
           ['pointerleave', 'pointercancel'].forEach(type =>
-            playBadge.addEventListener(type, () => clearTimeout(badgeHoverTimer))
+            playBadge.addEventListener(type, () => {
+              pointerOnVideo = false;
+              clearTimeout(badgeHoverTimer);
+            })
           );
           playBadge.addEventListener('click', event => {
             event.preventDefault();
@@ -2640,9 +2750,9 @@
               baseTop = rect.top - hostRect.top;
 
             bar.style.display = 'flex';
-            bar.style.left = `${baseLeft + rect.width / 2 - bar.offsetWidth / 2}px`;
-            bar.style.top = `${baseTop + rect.height - bar.offsetHeight - 8}px`;
-            bar.style.width = `${Math.max(rect.width, 200)}px`;
+            bar.style.left = `${baseLeft}px`;
+            bar.style.width = `${rect.width}px`;
+            bar.style.top = `${baseTop + rect.height - bar.offsetHeight}px`;
 
             playBadge &&
               ((playBadge.style.left = `${baseLeft + rect.width / 2 - 23}px`),
@@ -2691,9 +2801,6 @@
           delete video.dataset.photoshowUserPlaying;
           syncVisibility();
           playButton.textContent = '\u25B6';
-        });
-        video.addEventListener('volumechange', () => {
-          muteButton.textContent = video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}';
         });
 
         // Keep the bar glued to the video when its size changes.
