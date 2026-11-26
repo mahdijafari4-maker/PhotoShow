@@ -259,6 +259,30 @@
         this.detectImage(imgSrc).then(imgInfo => ({ ...imgInfo, oriSrc }))
       );
     },
+    loadVideo: function (oriSrc) {
+      // Measures a video by its metadata (used to display videos in the viewer).
+      return new Promise(resolve => {
+        const probe = document.createElement('video');
+
+        probe.preload = 'metadata';
+        probe.muted = true;
+
+        const finish = imgInfo => {
+          probe.onloadedmetadata = probe.onerror = null;
+          resolve({ ...imgInfo, oriSrc });
+        };
+
+        probe.onloadedmetadata = () =>
+          finish({
+            src: oriSrc,
+            width: probe.videoWidth || 1280,
+            height: probe.videoHeight || 720
+          });
+        probe.onerror = () => finish({ src: '' });
+        setTimeout(() => finish({ src: '' }), 15000);
+        probe.src = oriSrc;
+      });
+    },
     cacheImage: function (id, imgSrc) {
       return imgSrc ? (this._cachedImages[id] = imgSrc) : this._cachedImages[id] || '';
     },
@@ -512,6 +536,8 @@
           : photoShowViewer.viewerShadow.remove();
       },
       loadingStatusDisplay: true, // Loading status display.
+      videoControls: true, // Video control bar for playing videos.
+      videoControlsReplace: false, // Replace native player controls with the video control bar.
       enableAnimation: true, // Transition animation.
       _enableAntialiasing: true, // Image anti-aliasing.
       get enableAntialiasing() {
@@ -681,7 +707,7 @@
                     !(e.ctrlKey && e.shiftKey) &&
                     !isActiveElementAnInput ||
                   eventKey === 'S' && photoShow.config.hotkeys.saveImage.isEnabled && !isActiveElementAnInput ||
-                  eventKey === 'V' &&
+                  (eventKey === 'V' || e.code === 'KeyV') &&
                     e.shiftKey &&
                     photoShow.config.hotkeys.openVideoInNewTab.isEnabled &&
                     !isActiveElementAnInput ||
@@ -782,6 +808,7 @@
         <div class="photoshow-viewer-shadow"></div>
         <div class="photoshow-img-wrapper">
           <img />
+          <video></video>
           <div class="photoshow-view-mode-switch-tip">a</div>
         </div>
         <i class="photoshow-img-size"></i>
@@ -789,6 +816,7 @@
     ), // Main container of the image viewer. (To avoid being automatically removed on https://www.bing.com/?mkt=en-ca, a class name prefixed with 'sb_' is needed.)
     viewerShadow: null, // Shadow element.
     viewerImg: null, // Image element.
+    viewerVideo: null, // Video element for video previews.
     viewerImgSizeTip: null, // Image size tip.
     viewModeSwitchTip: null, // View mode switch tip element.
     isViewerPosHor: true, // Indicates if the displaying position of the image viewer is on either the LEFT or RIGHT side of the trigger element.
@@ -1231,6 +1259,7 @@
             }
           ],
           [this.viewerImg, displayingStyles.img, !displayingStyles.viewerInitial],
+          [this.viewerVideo, displayingStyles.img, !displayingStyles.viewerInitial],
           [this.viewModeSwitchTip, displayingStyles.viewModeSwitchTip, true]
         ]);
 
@@ -1248,6 +1277,22 @@
           src: triggersParsingResult.src,
           title: triggersParsingResult.title
         };
+
+        // When the trigger is a video, preview the video itself instead of its poster image.
+        if (triggersParsingResult.element?.tagName === 'VIDEO') {
+          const videoEl = triggersParsingResult.element,
+            resolvedVideoSrc =
+              videoEl.currentSrc ||
+              videoEl.src ||
+              [...videoEl.querySelectorAll('source[src]')]
+                .filter(source => videoEl.canPlayType(source.type || ''))
+                .at(-1)?.src ||
+              '';
+
+          resolvedVideoSrc &&
+            ((this.imgSrc = new URL(resolvedVideoSrc, location.origin).href),
+            (this.preservedImg.src = this.imgSrc));
+        }
 
         chrome.runtime.sendMessage({
           cmd: 'VIEW_IMAGE',
@@ -1324,6 +1369,8 @@
               angleCos: 1
             };
             this.imgOriginalSize = null;
+            this.viewerVideo[0].pause();
+            this.viewerVideo.removeAttr('src').prop('controls', false).hide();
 
             // Set image loading status.
             var imgLoadingTipTimer = photoShow.config.loadingStatusDisplay
@@ -1334,7 +1381,7 @@
               : null;
 
             // Load image.
-            tools.loadImage(this.imgSrc).then(imgInfo => {
+            ($(this.curTrigger).is('video') ? tools.loadVideo(this.imgSrc) : tools.loadImage(this.imgSrc)).then(imgInfo => {
               if (imgInfo.src) {
                 // Loading succeeds.
                 if (
@@ -1355,7 +1402,21 @@
                     .removeData('photoshow-hd-src');
 
                   this.viewerBox.addClass('img-shown');
-                  this.viewerImg.attr('src', this.imgSrc);
+
+                  if (curTrigger.is('video')) {
+                    // Video preview: play the video itself instead of showing its poster.
+                    this.viewerImg.removeAttr('src');
+                    this.viewerVideo
+                      .attr('src', this.imgSrc)
+                      .prop('controls', true)
+                      .show();
+                    this.viewerVideo[0].muted = true;
+                    this.viewerVideo[0].loop = true;
+                    this.viewerVideo[0].play().catch(() => {});
+                  } else {
+                    this.viewerVideo.removeAttr('src').prop('controls', false).hide();
+                    this.viewerImg.attr('src', this.imgSrc);
+                  }
 
                   const triggerRect = this.curTrigger.getBoundingClientRect();
                   this.triggerSize = {
@@ -1382,6 +1443,7 @@
 
                   tools.setStyle([
                     [this.viewerImg, displayingStyles.img],
+                    [this.viewerVideo, displayingStyles.img],
                     [this.viewModeSwitchTip, displayingStyles.viewModeSwitchTip]
                   ]);
 
@@ -1616,6 +1678,12 @@
     mouseLeaveAction: function (keepTriggerBlocked) {
       clearTimeout(this.viewerDisplayTimer);
 
+      // Stop and clear the preview video, if any.
+      if (this.viewerVideo?.attr('src')) {
+        this.viewerVideo[0].pause();
+        this.viewerVideo.removeAttr('src').prop('controls', false).hide();
+      }
+
       tools.setStyle([
         [
           this.viewerBox,
@@ -1829,6 +1897,22 @@
 
       const eventKey = e.key?.toUpperCase();
 
+      // Open the video under the mouse in a new tab (Shift + V, layout-independent via 'e.code').
+      if (
+        e.code === 'KeyV' &&
+        e.shiftKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        photoShow.config.hotkeys.openVideoInNewTab.isEnabled &&
+        !this.isActiveElementAnInput &&
+        !window.getSelection().toString() &&
+        this.hoveredVideo
+      ) {
+        e.preventDefault();
+        this.openVideoInNewTabAction();
+      }
+
       switch (eventKey) {
         case 'TAB':
           photoShow.config.hotkeys.openImageInNewTab.isEnabled &&
@@ -1866,19 +1950,6 @@
 
           break;
 
-        case 'V':
-          if (
-            e.shiftKey &&
-            photoShow.config.hotkeys.openVideoInNewTab.isEnabled &&
-            !this.isActiveElementAnInput &&
-            !window.getSelection().toString() &&
-            this.hoveredVideo
-          ) {
-            e.preventDefault();
-            this.openVideoInNewTabAction();
-          }
-
-          break;
 
         default:
       }
@@ -2169,8 +2240,11 @@
     );
 
     // Video control bar for playing videos (e.g. Civitai video previews).
+    // Modes: 'auto' (default) shows the bar only for videos without native player controls;
+    // 'always' replaces the native controls; 'off' disables the bar. (See popup settings.)
     (() => {
       const SEEK_SECONDS = 5,
+        SPEEDS = [1, 1.25, 1.5, 2, 0.5],
         videoBars = new Map(),
         resolveVideoSrc = video =>
           (
@@ -2181,42 +2255,127 @@
               .at(-1)?.src ||
             video.poster ||
             ''
-          ).trim();
+          ).trim(),
+        formatTime = seconds => {
+          if (!Number.isFinite(seconds)) {
+            return '\u2013:\u2013\u2013';
+          }
+
+          const h = Math.floor(seconds / 3600),
+            m = Math.floor((seconds % 3600) / 60),
+            s = Math.floor(seconds % 60);
+
+          return (h ? [h, m, s] : [m, s]).map(part => String(part).padStart(2, '0')).join(':');
+        };
+
+      const controlMode = () =>
+        !photoShow.config.videoControls ? 'off' : photoShow.config.videoControlsReplace ? 'always' : 'auto';
 
       const buildBar = video => {
         const bar = document.createElement('div');
 
         bar.className = 'photoShow photoshow-video-controls';
         bar.style.cssText =
-          'position:absolute;display:flex;gap:2px;align-items:center;z-index:2147483646;background:rgba(0,0,0,0.65);border-radius:7px;padding:3px 8px;height:28px;box-sizing:border-box;color:#fff;font:14px/1.4 sans-serif;user-select:none;';
+          'position:absolute;display:flex;flex-direction:column;gap:3px;z-index:2147483646;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);border-radius:8px;padding:5px 8px 6px;box-sizing:border-box;color:#fff;font:12px/1.2 sans-serif;user-select:none;min-width:180px;';
+
+        // --- Timeline row. ---
+        const timelineRow = document.createElement('div');
+
+        timelineRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+        const timeLabel = document.createElement('span');
+
+        timeLabel.textContent = '0:00 / \u2013:\u2013\u2013';
+        timeLabel.style.cssText = 'font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9;';
+
+        const timeline = document.createElement('div');
+
+        timeline.style.cssText = 'position:relative;flex:1;height:14px;display:flex;align-items:center;cursor:pointer;';
+
+        const timelineTrack = document.createElement('div');
+
+        timelineTrack.style.cssText =
+          'position:relative;width:100%;height:4px;border-radius:2px;background:rgba(255,255,255,0.25);overflow:hidden;';
+
+        const timelineBuffer = document.createElement('div');
+
+        timelineBuffer.style.cssText = 'position:absolute;inset:0;width:0;background:rgba(255,255,255,0.3);';
+
+        const timelineFill = document.createElement('div');
+
+        timelineFill.style.cssText = 'position:absolute;inset:0;width:0;background:#ff2f70;';
+        timelineTrack.append(timelineBuffer, timelineFill);
+        timeline.appendChild(timelineTrack);
+        timelineRow.append(timeline, timeLabel);
+
+        // --- Buttons row. ---
+        const buttonsRow = document.createElement('div');
+
+        buttonsRow.style.cssText = 'display:flex;align-items:center;gap:2px;';
 
         const makeButton = (label, title, action) => {
           const button = document.createElement('span');
 
           button.textContent = label;
           button.title = title;
-          button.style.cssText = 'cursor:pointer;padding:0 7px;';
+          button.style.cssText = 'cursor:pointer;padding:2px 6px;';
           button.addEventListener('click', event => {
             event.preventDefault();
             event.stopPropagation();
             action();
           });
-          bar.appendChild(button);
+          buttonsRow.appendChild(button);
 
           return button;
         };
 
-        const toggleButton = makeButton(video.paused ? '▶' : '⏸', 'Play / Pause', () =>
+        const playButton = makeButton(video.paused ? '\u25B6' : '\u23F8', 'Play / Pause', () =>
           video.paused ? video.play().catch(() => {}) : video.pause()
         );
 
         makeButton(
-          '⏪',
+          '\u23EA',
           `Back ${SEEK_SECONDS}s`,
           () => (video.currentTime = Math.max(0, video.currentTime - SEEK_SECONDS))
         );
-        makeButton('⏩', `Forward ${SEEK_SECONDS}s`, () => (video.currentTime += SEEK_SECONDS));
-        makeButton('↗', 'Open in new tab', () => {
+        makeButton('\u23E9', `Forward ${SEEK_SECONDS}s`, () => (video.currentTime += SEEK_SECONDS));
+
+        const sep = document.createElement('span');
+
+        sep.textContent = '|';
+        sep.style.cssText = 'opacity:0.35;padding:0 2px;';
+        buttonsRow.appendChild(sep);
+
+        const muteButton = makeButton(
+          video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}',
+          'Mute / Unmute',
+          () => (video.muted = !video.muted)
+        );
+
+        const volumeSlider = document.createElement('input');
+
+        volumeSlider.type = 'range';
+        volumeSlider.min = 0;
+        volumeSlider.max = 1;
+        volumeSlider.step = 0.05;
+        volumeSlider.value = video.muted ? 0 : video.volume;
+        volumeSlider.title = 'Volume';
+        volumeSlider.style.cssText = 'width:64px;accent-color:#ff2f70;cursor:pointer;';
+        volumeSlider.addEventListener('input', () => {
+          video.muted = false;
+          video.volume = +volumeSlider.value;
+        });
+        volumeSlider.addEventListener('pointerdown', event => event.stopPropagation());
+        buttonsRow.appendChild(volumeSlider);
+
+        const speedButton = makeButton(`${video.playbackRate}\u00d7`, 'Playback speed', () => {
+          const idx = SPEEDS.indexOf(video.playbackRate);
+
+          video.playbackRate = SPEEDS[(idx + 1) % SPEEDS.length] || 1;
+          speedButton.textContent = `${video.playbackRate}\u00d7`;
+        });
+
+        makeButton('\u2197', 'Open in new tab', () => {
           const videoSrc = resolveVideoSrc(video);
 
           videoSrc &&
@@ -2225,7 +2384,7 @@
               args: { videoSrc: new URL(videoSrc, location.origin).href }
             });
         });
-        makeButton('⬇', 'Download video', () => {
+        makeButton('\u2B07', 'Download video', () => {
           const videoSrc = resolveVideoSrc(video);
 
           videoSrc &&
@@ -2234,52 +2393,106 @@
               args: { imgSrc: new URL(videoSrc, location.origin).href, imgTitle: video.title || '' }
             });
         });
+        makeButton('\u26F6', 'Fullscreen', () => {
+          if (document.fullscreenElement === video) {
+            document.exitFullscreen();
+          } else {
+            video.controls = true; // Our bar cannot be displayed in fullscreen; fall back to the native controls.
+            video.requestFullscreen().catch(() => {});
+          }
+        });
 
         document.documentElement.appendChild(bar);
 
+        const syncTime = () => {
+          timeLabel.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+          timelineFill.style.width = video.duration ? `${(video.currentTime / video.duration) * 100}%` : '0';
+          video.buffered.length &&
+            video.duration &&
+            (timelineBuffer.style.width = `${(video.buffered.end(video.buffered.length - 1) / video.duration) * 100}%`);
+        };
+        const syncVolume = () => {
+          muteButton.textContent = video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}';
+          volumeSlider.value = video.muted ? 0 : video.volume;
+        };
         const position = () => {
           const rect = video.getBoundingClientRect();
 
           if (video.isConnected && rect.width && rect.height) {
             bar.style.display = 'flex';
             bar.style.left = `${rect.left + window.scrollX + rect.width / 2 - bar.offsetWidth / 2}px`;
-            bar.style.top = `${rect.top + window.scrollY + rect.height - bar.offsetHeight - 10}px`;
+            bar.style.width = `${Math.max(rect.width, 180)}px`;
+            bar.style.top = `${rect.top + window.scrollY + rect.height - bar.offsetHeight - 6}px`;
           } else {
             bar.remove();
           }
         };
 
+        // Seeking by dragging the timeline.
+        let isDragging = false;
+
+        const seekTo = event => {
+          const rect = timeline.getBoundingClientRect();
+
+          if (video.duration) {
+            video.currentTime = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * video.duration;
+            syncTime();
+          }
+        };
+
+        timeline.addEventListener('pointerdown', event => {
+          isDragging = true;
+          timeline.setPointerCapture(event.pointerId);
+          event.preventDefault();
+          event.stopPropagation();
+          seekTo(event);
+        });
+        timeline.addEventListener('pointermove', event => isDragging && seekTo(event));
+        timeline.addEventListener('pointerup', () => (isDragging = false));
+        timeline.addEventListener('click', event => event.stopPropagation());
+
+        video.addEventListener('timeupdate', syncTime);
+        video.addEventListener('loadedmetadata', syncTime);
+        video.addEventListener('durationchange', syncTime);
+        video.addEventListener('progress', syncTime);
+        video.addEventListener('play', () => (playButton.textContent = '\u23F8'));
+        video.addEventListener('pause', () => (playButton.textContent = '\u25B6'));
+        video.addEventListener('volumechange', syncVolume);
+
         position();
         setTimeout(position, 300); // In case the video size settles late.
+        setTimeout(syncTime, 100);
         videoBars.set(video, { bar, position });
-
-        // Keep the play/pause icon in sync.
-        video.addEventListener('play', () => (toggleButton.textContent = '⏸'));
-        video.addEventListener('pause', () => (toggleButton.textContent = '▶'));
       };
 
-      // Attach a bar to each video once it starts playing; drop bars of videos that leave the document.
       const sweep = () => {
-        if (photoShow.isEnabled) {
+        const mode = controlMode();
+
+        if (mode !== 'off') {
           document.querySelectorAll('video').forEach(video => {
-            !video.paused && !videoBars.has(video) && buildBar(video);
+            if (videoBars.has(video)) {
+              return;
+            }
+
+            if (mode === 'always') {
+              video.controls = false; // Replace the native player controls with the PhotoShow bar.
+              buildBar(video);
+            } else if (!video.controls && !video.paused) {
+              buildBar(video); // Only for videos that have no native player controls.
+            }
           });
         }
 
         videoBars.forEach((info, video) => {
-          if (!photoShow.isEnabled || !video.isConnected || !info.bar.isConnected) {
+          if (mode === 'off' || !video.isConnected || !info.bar.isConnected) {
             info.bar.remove();
             videoBars.delete(video);
           }
         });
       };
 
-      document.addEventListener(
-        'play',
-        e => e.target?.tagName === 'VIDEO' && photoShow.isEnabled && !videoBars.has(e.target) && buildBar(e.target),
-        true
-      );
-
+      document.addEventListener('play', e => e.target?.tagName === 'VIDEO' && sweep(), true);
+      document.addEventListener('fullscreenchange', () => sweep());
       addEventListener('scroll', () => videoBars.forEach(info => info.position()), {
         capture: true,
         passive: true

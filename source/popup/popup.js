@@ -364,6 +364,15 @@ $('#hotkeysSection dd').append(
     .join('')}</table>`
 );
 
+// Video controls.
+$('#videoControlsSection dt h3').text(chrome.i18n.getMessage('videoControlsHeader'));
+$('#videoControlsSection [config-item="videoControls"] span').text(
+  chrome.i18n.getMessage('videoControlsBarToggle')
+);
+$('#videoControlsSection [config-item="videoControlsReplace"] span').text(
+  chrome.i18n.getMessage('videoControlsReplaceToggle')
+);
+
 // File naming.
 $('#fileNamingSection dt h3').text(chrome.i18n.getMessage('fileNamingHeader'));
 $('#fileNamingFilenameTitle').text(chrome.i18n.getMessage('fileNamingFilenameTitle'));
