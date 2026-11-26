@@ -3767,7 +3767,7 @@ const tools = {
     const timestamp = new Date(downloadTime || Date.now()),
       filename =
         originalFilename ||
-        (/([^/]+?(?:\.(?:jpe?g|jfif|gif|pn[gj]|bmp|webp|svg))?(?=(?:\?|$)))/i.test(imgSrc) ? RegExp.$1 : ''),
+        (/([^/]+?(?:\.(?:jpe?g|jfif|gif|pn[gj]|bmp|webp|svg|mp4|webm|m4v|mov|mkv))?(?=(?:\?|$)))/i.test(imgSrc) ? RegExp.$1 : ''),
       filenamePatterns = {
         ...(/(?<y>\d+)-(?<M>\d+)-(?<d>\d+)T(?<h>\d+):(?<m>\d+):(?<s>\d+)/.exec(
           new Date(timestamp - timestamp.getTimezoneOffset() * 60 * 1000).toISOString()
@@ -3776,9 +3776,9 @@ const tools = {
         I: imgTitle.replaceAll(/[<>:"/\\|?*]/g, '_') || filename.split('.')[0],
         O: filename.split('.')[0]
       },
-      extFilename = /(\.(?:jpe?g|gif|png|bmp|webp|svg)$)/i.test(filename)
+      extFilename = /(\.(?:jpe?g|gif|png|bmp|webp|svg|mp4|webm|m4v|mov|mkv)$)/i.test(filename)
         ? RegExp.$1.toLowerCase()
-        : /(\.(?:jpe?g|gif|png|bmp|webp|svg))(?=(?:\?|$))/i.test(imgSrc)
+        : /(\.(?:jpe?g|gif|png|bmp|webp|svg|mp4|webm|m4v|mov|mkv))(?=(?:\?|$))/i.test(imgSrc)
         ? RegExp.$1.toLowerCase()
         : '.jpg';
 
@@ -4085,62 +4085,74 @@ var photoShow = {
 var photoShowContextMenus = {
   hasMenuCreated: false,
   hasImageItemsCreated: false,
+  createImageItems: function () {
+    chrome.contextMenus.create({
+      id: 'photoShowContextMenu_open',
+      parentId: 'photoShowContextMenu_root',
+      title: chrome.i18n.getMessage('contextMenuTitle_open'),
+      contexts: ['all']
+    });
+
+    // TODO: Need to display a download message when the download process cannot be triggered immediately.
+    chrome.contextMenus.create({
+      id: 'photoShowContextMenu_save',
+      parentId: 'photoShowContextMenu_root',
+      title: chrome.i18n.getMessage('contextMenuTitle_save'),
+      contexts: ['all']
+    });
+
+    chrome.contextMenus.create({
+      id: 'photoShowContextMenu_copy',
+      parentId: 'photoShowContextMenu_root',
+      title: chrome.i18n.getMessage('contextMenuTitle_copy'),
+      contexts: ['all']
+    });
+
+    this.hasImageItemsCreated = true;
+  },
   create: function () {
-    if (PHOTOSHOW_CONFIGS.contextMenu !== false && !this.hasMenuCreated) {
-      chrome.contextMenus.create({
-        id: 'photoShowContextMenu_root',
-        title: 'PhotoShow',
-        contexts: ['all']
-      });
-
-      chrome.contextMenus.create({
-        id: 'photoShowContextMenu_video_open',
-        parentId: 'photoShowContextMenu_root',
-        title: chrome.i18n.getMessage('contextMenuTitle_video_open'),
-        contexts: ['video'],
-      });
-
-      chrome.contextMenus.create({
-        id: 'photoShowContextMenu_video_details',
-        parentId: 'photoShowContextMenu_root',
-        title: chrome.i18n.getMessage('contextMenuTitle_video_details'),
-        contexts: ['video'],
-      });
-
-      chrome.contextMenus.create({
-        id: 'photoShowContextMenu_video_copy',
-        parentId: 'photoShowContextMenu_root',
-        title: chrome.i18n.getMessage('contextMenuTitle_video_copy'),
-        contexts: ['video'],
-      });
-
-      this.hasMenuCreated = true;
+    if (PHOTOSHOW_CONFIGS.contextMenu === false) {
+      return;
     }
 
-    if (PHOTOSHOW_CONFIGS.contextMenu !== false && !this.hasImageItemsCreated) {
-      chrome.contextMenus.create({
-        id: 'photoShowContextMenu_open',
-        parentId: 'photoShowContextMenu_root',
-        title: chrome.i18n.getMessage('contextMenuTitle_open'),
-        contexts: ['all'],
-      });
-
-      // TODO: Need to display a download message when the download process cannot be triggered immediately.
-      chrome.contextMenus.create({
-        id: 'photoShowContextMenu_save',
-        parentId: 'photoShowContextMenu_root',
-        title: chrome.i18n.getMessage('contextMenuTitle_save'),
-        contexts: ['all'],
-      });
-
-      chrome.contextMenus.create({
-        id: 'photoShowContextMenu_copy',
-        parentId: 'photoShowContextMenu_root',
-        title: chrome.i18n.getMessage('contextMenuTitle_copy'),
-        contexts: ['all'],
-      });
-
+    if (!this.hasMenuCreated) {
+      this.hasMenuCreated = true;
       this.hasImageItemsCreated = true;
+
+      // Manifest V3: the service worker can restart at any time while context menus persist,
+      // so existing menus are cleared first to avoid 'duplicate id' errors.
+      chrome.contextMenus.removeAll(() => {
+        chrome.contextMenus.create({
+          id: 'photoShowContextMenu_root',
+          title: 'PhotoShow',
+          contexts: ['all']
+        });
+
+        chrome.contextMenus.create({
+          id: 'photoShowContextMenu_video_open',
+          parentId: 'photoShowContextMenu_root',
+          title: chrome.i18n.getMessage('contextMenuTitle_video_open'),
+          contexts: ['video']
+        });
+
+        chrome.contextMenus.create({
+          id: 'photoShowContextMenu_video_details',
+          parentId: 'photoShowContextMenu_root',
+          title: chrome.i18n.getMessage('contextMenuTitle_video_details'),
+          contexts: ['video']
+        });
+
+        chrome.contextMenus.create({
+          id: 'photoShowContextMenu_video_copy',
+          parentId: 'photoShowContextMenu_root',
+          title: chrome.i18n.getMessage('contextMenuTitle_video_copy'),
+          contexts: ['video']
+        });
+
+        this.createImageItems();
+      });
+    } else if (!this.hasImageItemsCreated) {
+      this.createImageItems();
     }
   },
   removeImageItems: function () {
@@ -4319,6 +4331,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     case 'OPEN_IMG_IN_NEW_TAB': // Args: imgSrc
       tools.openImgInNewTab(request.args.imgSrc, sender.tab);
+
+      break;
+
+    case 'OPEN_VIDEO_IN_NEW_TAB': // Args: videoSrc
+      tools.openVideoInNewTab(request.args.videoSrc, sender.tab);
 
       break;
 

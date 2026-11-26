@@ -350,7 +350,8 @@ $('#hotkeysSection dd').append(
     'toggleViewMode',
     'openImageInNewTab',
     'saveImage',
-    'copyImageAddress'
+    'copyImageAddress',
+    'openVideoInNewTab'
   ]
     .map(
       keyName =>

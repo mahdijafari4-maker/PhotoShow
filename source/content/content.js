@@ -556,6 +556,9 @@
         },
         copyImageAddress: {
           isEnabled: true
+        },
+        openVideoInNewTab: {
+          isEnabled: true
         }
       }
     },
@@ -678,6 +681,10 @@
                     !(e.ctrlKey && e.shiftKey) &&
                     !isActiveElementAnInput ||
                   eventKey === 'S' && photoShow.config.hotkeys.saveImage.isEnabled && !isActiveElementAnInput ||
+                  eventKey === 'V' &&
+                    e.shiftKey &&
+                    photoShow.config.hotkeys.openVideoInNewTab.isEnabled &&
+                    !isActiveElementAnInput ||
                   eventKey === (photoShow.config.activationMode || '').toUpperCase()) &&
                 ((!isActiveElementAnInput && !window.getSelection().toString()) || hasImgShown)
               ) {
@@ -788,6 +795,7 @@
     isViewerChanged: true, // Indicates if the displaying features of the image viewer changes frome last time it was displayed.
     prevViewerDisplayFeatures: null, // Displaying features of the image viewer when it displayed last time.
     curTrigger: null, // Element that triggers image preview.
+    hoveredVideo: null, // Video element currently under the mouse pointer (for the video hotkey).
     imgSrc: '', // Src for the high-definition image (can be either a string or a Promise object).
     preservedImg: {
       src: '', // Src can be either a string or a Promise object.
@@ -1858,6 +1866,20 @@
 
           break;
 
+        case 'V':
+          if (
+            e.shiftKey &&
+            photoShow.config.hotkeys.openVideoInNewTab.isEnabled &&
+            !this.isActiveElementAnInput &&
+            !window.getSelection().toString() &&
+            this.hoveredVideo
+          ) {
+            e.preventDefault();
+            this.openVideoInNewTabAction();
+          }
+
+          break;
+
         default:
       }
 
@@ -1984,6 +2006,26 @@
     },
     winBlurAction: function () {
       this.isModifierKeyDown = false;
+    },
+    openVideoInNewTabAction: function () {
+      const video = this.hoveredVideo;
+
+      if (video && video.ownerDocument?.contains(video)) {
+        const videoSrc =
+          video.currentSrc ||
+          video.src ||
+          [...video.querySelectorAll('source[src]')]
+            .filter(source => video.canPlayType(source.type || ''))
+            .at(-1)?.src ||
+          video.poster ||
+          '';
+
+        videoSrc &&
+          chrome.runtime.sendMessage({
+            cmd: 'OPEN_VIDEO_IN_NEW_TAB',
+            args: { videoSrc: new URL(videoSrc, location.origin).href }
+          });
+      }
     },
     domMutateAction: function (mutations) {
       // Some websites update images only by changing their src attributes instead of replacing the whole img elements,
@@ -2116,6 +2158,136 @@
         photoShow.updateStateAndConfigs();
       }
     });
+
+    // Track the video element under the mouse pointer for the video hotkey (Shift + V).
+    document.addEventListener(
+      'mousemove',
+      e => (photoShowViewer.hoveredVideo = e.target?.closest?.('video') || null),
+      {
+        passive: true
+      }
+    );
+
+    // Video control bar for playing videos (e.g. Civitai video previews).
+    (() => {
+      const SEEK_SECONDS = 5,
+        videoBars = new Map(),
+        resolveVideoSrc = video =>
+          (
+            video.currentSrc ||
+            video.src ||
+            [...video.querySelectorAll('source[src]')]
+              .filter(source => video.canPlayType(source.type || ''))
+              .at(-1)?.src ||
+            video.poster ||
+            ''
+          ).trim();
+
+      const buildBar = video => {
+        const bar = document.createElement('div');
+
+        bar.className = 'photoShow photoshow-video-controls';
+        bar.style.cssText =
+          'position:absolute;display:flex;gap:2px;align-items:center;z-index:2147483646;background:rgba(0,0,0,0.65);border-radius:7px;padding:3px 8px;height:28px;box-sizing:border-box;color:#fff;font:14px/1.4 sans-serif;user-select:none;';
+
+        const makeButton = (label, title, action) => {
+          const button = document.createElement('span');
+
+          button.textContent = label;
+          button.title = title;
+          button.style.cssText = 'cursor:pointer;padding:0 7px;';
+          button.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            action();
+          });
+          bar.appendChild(button);
+
+          return button;
+        };
+
+        const toggleButton = makeButton(video.paused ? '▶' : '⏸', 'Play / Pause', () =>
+          video.paused ? video.play().catch(() => {}) : video.pause()
+        );
+
+        makeButton(
+          '⏪',
+          `Back ${SEEK_SECONDS}s`,
+          () => (video.currentTime = Math.max(0, video.currentTime - SEEK_SECONDS))
+        );
+        makeButton('⏩', `Forward ${SEEK_SECONDS}s`, () => (video.currentTime += SEEK_SECONDS));
+        makeButton('↗', 'Open in new tab', () => {
+          const videoSrc = resolveVideoSrc(video);
+
+          videoSrc &&
+            chrome.runtime.sendMessage({
+              cmd: 'OPEN_VIDEO_IN_NEW_TAB',
+              args: { videoSrc: new URL(videoSrc, location.origin).href }
+            });
+        });
+        makeButton('⬇', 'Download video', () => {
+          const videoSrc = resolveVideoSrc(video);
+
+          videoSrc &&
+            chrome.runtime.sendMessage({
+              cmd: 'DOWNLOAD_IMG',
+              args: { imgSrc: new URL(videoSrc, location.origin).href, imgTitle: video.title || '' }
+            });
+        });
+
+        document.documentElement.appendChild(bar);
+
+        const position = () => {
+          const rect = video.getBoundingClientRect();
+
+          if (video.isConnected && rect.width && rect.height) {
+            bar.style.display = 'flex';
+            bar.style.left = `${rect.left + window.scrollX + rect.width / 2 - bar.offsetWidth / 2}px`;
+            bar.style.top = `${rect.top + window.scrollY + rect.height - bar.offsetHeight - 10}px`;
+          } else {
+            bar.remove();
+          }
+        };
+
+        position();
+        setTimeout(position, 300); // In case the video size settles late.
+        videoBars.set(video, { bar, position });
+
+        // Keep the play/pause icon in sync.
+        video.addEventListener('play', () => (toggleButton.textContent = '⏸'));
+        video.addEventListener('pause', () => (toggleButton.textContent = '▶'));
+      };
+
+      // Attach a bar to each video once it starts playing; drop bars of videos that leave the document.
+      const sweep = () => {
+        if (photoShow.isEnabled) {
+          document.querySelectorAll('video').forEach(video => {
+            !video.paused && !videoBars.has(video) && buildBar(video);
+          });
+        }
+
+        videoBars.forEach((info, video) => {
+          if (!photoShow.isEnabled || !video.isConnected || !info.bar.isConnected) {
+            info.bar.remove();
+            videoBars.delete(video);
+          }
+        });
+      };
+
+      document.addEventListener(
+        'play',
+        e => e.target?.tagName === 'VIDEO' && photoShow.isEnabled && !videoBars.has(e.target) && buildBar(e.target),
+        true
+      );
+
+      addEventListener('scroll', () => videoBars.forEach(info => info.position()), {
+        capture: true,
+        passive: true
+      });
+      addEventListener('resize', () => videoBars.forEach(info => info.position()), { passive: true });
+      setInterval(sweep, 2000);
+      setTimeout(sweep, 500);
+    })();
 
     // Get initial state.
     photoShow.updateStateAndConfigs();
