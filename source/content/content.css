@@ -1,0 +1,540 @@
+/**
+ * Copyright (c) 2012-2022 Vincent W., MIT-licensed.
+ * @fileOverview PhotoShow content style.
+ * @author Vincent | vincentwang863@gmail.com
+ * @version 1.0.0.0 | 2012-12-01 | Vincent    // Initial version.
+ * @version 2.0.0.0 | 2013-01-03 | Vincent    // Updates: Add PhotoShow tag to the photo viewer.
+ * @version 3.0.0.0 | 2018-11-08 | Vincent    // Updates: Reconstruction.
+ * @version 3.1.0.0 | 2018-11-17 | Vincent    // Updates: Replace image resources with font icons.
+ * @version 3.1.1.0 | 2018-11-19 | Vincent    // Updates: Add 'photoshow-' prefix to icon class names;
+ *                                            // Updates: Add 'photoshow-icon-load-dot-ani' animation for image loading tip.
+ * @version 3.2.1.0 | 2018-12-01 | Vincent    // Updates: Transform to LESS.
+ * @version 3.4.3.0 | 2019-03-12 | Vincent    // Bug Fix: Fix the style rule that will cause some pages irresponsive.
+ * @version 3.6.0.1 | 2019-05-20 | Vincent    // Updates: Move photoshow icon outsite the view box.
+ * @version 3.9.0.0 | 2019-09-22 | Vincent    // Bug Fix: Remove globally appended pointerNone style for all pseudo elements.
+ * @version 3.9.1.0 | 2019-09-25 | Vincent    // Updates: Fix the shivering problem of the loading icon.
+ * @version 4.0.0.0 | 2019-11-07 | Vincent    // Updates: Add VIEW MODE feature;
+ *                                            // Updates: Add shadow for the viewer and allow it to be hidden by user settings;
+ *                                            // Updates: Allow PhotoShow logo in the viewer to be hidden by user settings;
+ *                                            // Updates: Locate the viewer automatically on all sides of the trigger image;
+ *                                            // Updates: Add end-reach prompt for image scrolling;
+ *                                            // Updates: Add new hotkeys 'Esc', 'Home', 'End', 'PageUp', 'PageDown', 'Arrow Left', 'Arrow Right', 'M', 'L', 'A' and 'P';
+ *                                            // Updates: Hide PhotoShow logo in the viewer when the image is too small;
+ *                                            // Updates: Optimize viewer displaying animation;
+ *                                            // Updates: Optimize all the icons.
+ * @version 4.0.8.0 | 2020-01-04 | Vincent    // Updates: Change all 'icon' to 'icons' literally to avoid conflicts with some wildcard-matching style rules (selector: [class*="icon-"]) on 500px.com.
+ * @version 4.1.0.0 | 2020-03-13 | Vincent    // Updates: Support for image address copying;
+ *                                            // Updates: Add global message.
+ * @version 4.1.2.0 | 2020-03-14 | Vincent    // Bug Fix: Fix global message style issues on Instagram.
+ * @version 4.5.6.0 | 2020-12-31 | Vincent    // Bug Fix: Increase z-index value of the viewer to avoid being overlaid.
+ * @version 4.6.0.0 | 2021-01-24 | Vincent    // Updates: Support displaying HD image size in the viewer;
+ *                                            // Updates: Remove the feature of displaying PhotoShow logo in the viewer
+ * @version 4.6.2.0 | 2021-03-01 | Vincent    // Bug Fix: Add fixed font size to image size label.
+ * @version 4.6.5.0 | 2021-04-28 | Vincent    // Bug Fix: Fix loading message line-wrapping problem.
+ * @version 4.7.1.0 | 2021-07-07 | Vincent    // Bug Fix: PhotoShow message style issue on Instagram.
+ * @version 4.7.2.0 | 2021-07-17 | Vincent    // Updates: Optimize image size label style.
+ * @version 4.8.0.0 | 2021-08-14 | Vincent    // Bug Fix: Image viewer message icon color is overridden by host page styles.
+ * @version 4.9.0.0 | 2021-08-22 | Vincent    // Updates: Reset styles to reduce conflicts.
+ * @version 4.9.2.0 | 2021-08-27 | Vincent    // Updates: Optimize the view mode switch tip styles.
+ * @version 4.10.0.0 | 2021-09-18 | Vincent   // Updates: Update image loading status related styles;
+ *                                            // Updates: Add frosted-glass effect to image viewer.
+ * @version 4.11.0.0 | 2021-10-21 | Vincent   // Updates: Split image loader related styles for sharing with frame content styling.
+ * @version 4.20.0.0 | 2023-02-05 | Vincent   // Updates: Allow enabling/disabling image anti-aliasing (GitHub issue #90).
+ * @version 4.21.0.0 | 2023-03-09 | Vincent   // Updates: Optimize global message style and add the error message variant.
+ */
+/**
+ * Copyright (c) 2012-2022 Vincent W., MIT-licensed.
+ * @fileOverview PhotoShow content style - image loader styles.
+ * @author Vincent | vincentwang863@gmail.com
+ * @version 4.11.0.0 | 2021-10-21 | Vincent   // Initial version.
+ * @version 4.15.0.0 | 2022-03-27 | Vincent   // Updates: Clean duplicated code.
+ */
+@keyframes photoshow-img-loading-ani {
+  0% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 0deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 0deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  5% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 18deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 18deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  10% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 36deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 36deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  15% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 54deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 54deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  20% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 72deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 72deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  25% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 90deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 90deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  30% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 108deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 108deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  35% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 126deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 126deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  40% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 144deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 144deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  45% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 162deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 162deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  50% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 180deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 180deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  55.00000000000001% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 198deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 198deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  60% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 216deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 216deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  65% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 234deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 234deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  70% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 252deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 252deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  75% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 270deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 270deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  80% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 288deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 288deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  85% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 306deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 306deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  90% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 324deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 324deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  95% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 342deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 342deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  100% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 360deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 360deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+}
+.photoshow-img-loading {
+  animation: photoshow-img-loading-ani 0.8s linear infinite !important;
+}
+@keyframes photoshow-img-loading-fail-ani {
+  0% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  1% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(54deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-36deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(54deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-36deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  2% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(63deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-27deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(63deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-27deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  3% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(72deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-18deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(72deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-18deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  4% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(81deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-9deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(81deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-9deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  5% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(90deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(0deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(90deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(0deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  6% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(99deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(9deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(99deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(9deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  6.999999999999999% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(108deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(18deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(108deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(18deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  8% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(117deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(27deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(117deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(27deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  9% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(126deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(36deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(126deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(36deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  10% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(135deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(135deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  100% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(135deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(135deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+}
+.photoshow-img-loading-fail {
+  animation: photoshow-img-loading-fail-ani 2s ease forwards !important;
+}
+@font-face {
+  font-family: photoShowIconFont;
+  src: url('chrome-extension://__MSG_@@extension_id__/resources/photoShowIcons.woff2') format('woff2'), url('chrome-extension://__MSG_@@extension_id__/resources/photoShowIcons.woff') format('woff');
+}
+@keyframes photoshow-viewer-top-end-ani {
+  0% {
+    opacity: 0.1;
+    height: 0;
+    top: 0;
+  }
+  20% {
+    opacity: 0.5;
+    height: 50px;
+    top: -25px;
+  }
+  100% {
+    opacity: 0.1;
+    height: 0;
+    top: 0;
+  }
+}
+@keyframes photoshow-viewer-right-end-ani {
+  0% {
+    opacity: 0.1;
+    width: 0;
+    right: 0;
+  }
+  20% {
+    opacity: 0.5;
+    width: 50px;
+    right: -25px;
+  }
+  100% {
+    opacity: 0.1;
+    width: 0;
+    right: 0;
+  }
+}
+@keyframes photoshow-viewer-bottom-end-ani {
+  0% {
+    opacity: 0.1;
+    height: 0;
+    bottom: 0;
+  }
+  20% {
+    opacity: 0.5;
+    height: 50px;
+    bottom: -25px;
+  }
+  100% {
+    opacity: 0.1;
+    height: 0;
+    bottom: 0;
+  }
+}
+@keyframes photoshow-viewer-left-end-ani {
+  0% {
+    opacity: 0.1;
+    width: 0;
+    left: 0;
+  }
+  20% {
+    opacity: 0.5;
+    width: 50px;
+    left: -25px;
+  }
+  100% {
+    opacity: 0.1;
+    width: 0;
+    left: 0;
+  }
+}
+@keyframes photoshow-viewer-view-mode-switching-ani {
+  0% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+@keyframes photoshow-global-msg-ani {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, -100px, 0);
+  }
+  20% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0);
+  }
+  90% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, -100px, 0);
+  }
+}
+.photoshow-icons {
+  width: auto;
+  height: auto;
+  -webkit-font-smoothing: antialiased;
+  font-family: photoShowIconFont;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 16px;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  outline: 0;
+}
+.photoshow-icons:before {
+  display: inline-block;
+}
+.photoshow-icons-logo:before {
+  content: '\e900';
+  color: #fff;
+}
+#photoShowViewer,
+.photoshow-global-msg-layer,
+.photoshow-hidden-elements {
+  all: initial;
+  font: 14px -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', 'Microsoft Yahei', '\5b8b\4f53', sans-serif;
+  pointer-events: none;
+}
+#photoShowViewer {
+  display: block;
+  width: 220px;
+  min-width: 220px;
+  height: 40px;
+  min-height: 40px;
+  background: rgba(248, 248, 248, 0.8);
+  box-sizing: border-box;
+  border: solid 1px #fff;
+  border-radius: 1px;
+  position: fixed;
+  z-index: 2147483647;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  will-change: opacity, transform;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+#photoShowViewer.img-shown {
+  min-width: unset;
+  min-height: unset;
+}
+#photoShowViewer.img-shown .photoshow-img-wrapper {
+  display: block;
+}
+#photoShowViewer.img-shown .photoshow-img-size {
+  opacity: 1;
+}
+#photoShowViewer.img-size-hidden .photoshow-img-size {
+  display: none;
+}
+#photoShowViewer.top-end .photoshow-img-wrapper:after,
+#photoShowViewer.right-end .photoshow-img-wrapper:after,
+#photoShowViewer.bottom-end .photoshow-img-wrapper:after,
+#photoShowViewer.left-end .photoshow-img-wrapper:after {
+  content: '';
+  position: absolute;
+  display: block;
+  opacity: 0.1;
+  background: radial-gradient(closest-side at center, #6cbcef 99%, transparent);
+}
+#photoShowViewer.top-end .photoshow-img-wrapper:after {
+  width: 100%;
+  height: 0;
+  top: 0;
+  left: 0;
+  animation: photoshow-viewer-top-end-ani 1s linear 0s forwards;
+}
+#photoShowViewer.right-end .photoshow-img-wrapper:after {
+  width: 0;
+  height: 100%;
+  top: 0;
+  right: 0;
+  animation: photoshow-viewer-right-end-ani 1s linear 0s forwards;
+}
+#photoShowViewer.bottom-end .photoshow-img-wrapper:after {
+  width: 100%;
+  height: 0;
+  bottom: 0;
+  left: 0;
+  animation: photoshow-viewer-bottom-end-ani 1s linear 0s forwards;
+}
+#photoShowViewer.left-end .photoshow-img-wrapper:after {
+  width: 0;
+  height: 100%;
+  top: 0;
+  left: 0;
+  animation: photoshow-viewer-left-end-ani 1s linear 0s forwards;
+}
+#photoShowViewer.view-mode-switching .photoshow-view-mode-switch-tip {
+  animation: photoshow-viewer-view-mode-switching-ani 0.8s ease 0s forwards;
+}
+#photoShowViewer .photoshow-viewer-shadow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  background: gray;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+}
+#photoShowViewer .photoshow-img-wrapper {
+  position: relative;
+  display: none;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+#photoShowViewer .photoshow-img-wrapper img {
+  all: unset;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 1px;
+}
+#photoShowViewer .photoshow-img-wrapper .photoshow-img-no-antialiasing {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+#photoShowViewer .photoshow-img-wrapper .photoshow-view-mode-switch-tip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: gray;
+  color: #fff;
+  font-family: photoShowIconFont;
+  line-height: 1;
+  mix-blend-mode: multiply;
+  opacity: 0;
+  text-transform: uppercase;
+}
+#photoShowViewer .photoshow-img-size {
+  position: absolute;
+  display: block;
+  right: 0;
+  bottom: 0;
+  font-style: normal;
+  color: #fff;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+#photoShowViewer .photoshow-img-size:before {
+  content: '';
+  position: absolute;
+  display: block;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border: solid 1px #fff;
+  border-width: 1px 0 0 1px;
+  border-radius: 4px 0 0 0;
+  background: rgba(108, 188, 239, 0.75);
+  transform: skew(-20deg);
+  transform-origin: left bottom;
+}
+#photoShowViewer .photoshow-img-size:after {
+  content: attr(size);
+  position: relative;
+  padding: 0 4px 0 12px;
+  z-index: 1;
+  line-height: 1.5;
+}
+.photoshow-global-msg-layer {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  z-index: 2147483647;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+  animation: photoshow-global-msg-ani 2.5s ease 0s forwards;
+  backdrop-filter: blur(4px);
+  transform: translateX(-50%);
+}
+.photoshow-global-msg-layer .photoshow-global-msg {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  background: rgba(108, 188, 239, 0.85);
+  padding: 12px 20px;
+  border-radius: 2px;
+  line-height: 1;
+  font-size: 0;
+  color: #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+.photoshow-global-msg-layer .photoshow-global-msg i {
+  font-style: normal;
+  font-size: 16px;
+}
+.photoshow-global-msg-layer .photoshow-global-msg .photoshow-icons-logo {
+  margin-right: 0.25em;
+  color: #fff;
+  font-size: 24px;
+}
+.photoshow-global-msg-layer .photoshow-global-msg--error {
+  background: rgba(219, 75, 55, 0.85);
+}
+.photoshow-hidden-elements {
+  position: absolute;
+  top: -1px;
+  height: 0;
+  z-index: -1;
+}
