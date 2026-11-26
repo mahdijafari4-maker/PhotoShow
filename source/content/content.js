@@ -2190,13 +2190,13 @@
     // Video control bar for playing videos (e.g. Civitai video previews).
     // Modes (popup 'VIDEO CONTROLS' settings): 'auto' (default) shows the bar only for videos
     // without native player controls; 'always' replaces the native controls; 'off' disables it.
-    // While paused, the full bar fades out and only a small play badge stays visible.
-    // Nothing plays without an explicit user action, the last played video wins (the others
-    // pause), and the sound of the video being played is enabled automatically.
+    // The full bar is visible only while the video is playing; when paused, a small play badge
+    // (hover it for a second to play) fades in while the pointer is over the video.
+    // Nothing plays without an explicit user action, the last played video wins, and its sound
+    // is enabled automatically. The bar lives inside the video's positioned parent, so hovering
+    // the controls keeps the site's own hover/focus behavior of the video intact.
     (() => {
       const SEEK_SECONDS = 5,
-        SPEEDS = [1, 1.25, 1.5, 2, 0.5],
-        OVERLAY_SIZES = ['fit', 1, 0.75, 0.5],
         videoBars = new Map(),
         resolveVideoSrc = video =>
           (
@@ -2210,7 +2210,7 @@
           ).trim(),
         formatTime = seconds => {
           if (!Number.isFinite(seconds)) {
-            return '–:––';
+            return '\u2013:\u2013\u2013';
           }
 
           const h = Math.floor(seconds / 3600),
@@ -2243,14 +2243,15 @@
           return;
         }
 
-        const size = OVERLAY_SIZES[overlay.sizeIdx],
-          video = overlay.video;
+        const video = overlay.video,
+          size = overlay.size;
 
         if (size === 'fit' || !video.videoWidth) {
+          // Fits the whole browser window, choosing the binding side automatically.
           video.style.width = '';
           video.style.height = '';
-          video.style.maxWidth = '92vw';
-          video.style.maxHeight = '88vh';
+          video.style.maxWidth = '98vw';
+          video.style.maxHeight = '98vh';
         } else {
           video.style.maxWidth = '';
           video.style.maxHeight = '';
@@ -2293,14 +2294,15 @@
 
         root.className = 'photoShow photoshow-video-overlay';
         root.style.cssText =
-          'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
-        video.style.cssText = 'position:relative;background:#000;border-radius:4px;max-width:92vw;max-height:88vh;';
+          'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,0.85);display:flex;overflow:auto;';
+        video.style.cssText =
+          'position:relative;margin:auto;background:#000;border-radius:4px;max-width:98vw;max-height:98vh;';
         video.src = videoSrc;
         root.appendChild(video);
         document.documentElement.appendChild(root);
 
-        overlay = { root, video, sourceVideo, sizeIdx: 0 };
-        overlay.controls = buildBar(video, { overlay: true, fixed: true, container: root });
+        overlay = { root, video, sourceVideo, size: 'fit' };
+        overlay.controls = buildBar(video, { overlay: true });
 
         // Pause and hide the in-page video: only one video plays at a time.
         sourceVideo.pause();
@@ -2316,31 +2318,37 @@
       };
 
       const buildBar = (video, opts = {}) => {
+        // A positioned ancestor (e.g. the site's hover card) hosts the bar so that hovering the
+        // controls still counts as hovering the video for the site. Falls back to the document.
+        const host =
+          video.parentElement && getComputedStyle(video.parentElement).position !== 'static'
+            ? video.parentElement
+            : document.documentElement;
         const bar = document.createElement('div');
         let playBadge = null;
 
         bar.className = 'photoShow photoshow-video-controls';
         bar.style.cssText =
-          'position:absolute;display:flex;flex-direction:column;gap:3px;z-index:2147483646;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);border-radius:8px;padding:5px 8px 6px;box-sizing:border-box;color:#fff;font:12px/1.2 sans-serif;user-select:none;min-width:180px;transition:opacity 0.25s;';
+          'position:absolute;direction:ltr;display:flex;flex-direction:column;gap:2px;z-index:2147483646;background:rgba(0,0,0,0.4);backdrop-filter:blur(5px);border-radius:10px;padding:6px 10px 7px;box-sizing:border-box;color:#fff;font:13px/1.2 sans-serif;user-select:none;min-width:200px;transition:opacity 0.25s;';
 
-        // --- Timeline row. ---
+        // --- Timeline row: current time (left) / seek bar / total time (right). ---
         const timelineRow = document.createElement('div');
 
         timelineRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
 
-        const timeLabel = document.createElement('span');
+        const timeCur = document.createElement('span');
 
-        timeLabel.textContent = '0:00 / –:––';
-        timeLabel.style.cssText = 'font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9;';
+        timeCur.textContent = '0:00';
+        timeCur.style.cssText = 'font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9;min-width:40px;';
 
         const timeline = document.createElement('div');
 
-        timeline.style.cssText = 'position:relative;flex:1;height:14px;display:flex;align-items:center;cursor:pointer;';
+        timeline.style.cssText = 'position:relative;flex:1;height:16px;display:flex;align-items:center;cursor:pointer;';
 
         const timelineTrack = document.createElement('div');
 
         timelineTrack.style.cssText =
-          'position:relative;width:100%;height:4px;border-radius:2px;background:rgba(255,255,255,0.25);overflow:hidden;';
+          'position:relative;width:100%;height:5px;border-radius:3px;background:rgba(255,255,255,0.25);overflow:hidden;';
 
         const timelineBuffer = document.createElement('div');
 
@@ -2351,30 +2359,47 @@
         timelineFill.style.cssText = 'position:absolute;inset:0;width:0;background:#ff2f70;';
         timelineTrack.append(timelineBuffer, timelineFill);
         timeline.appendChild(timelineTrack);
-        timelineRow.append(timeline, timeLabel);
 
-        // --- Buttons row. ---
-        const buttonsRow = document.createElement('div');
+        const timeTotal = document.createElement('span');
 
-        buttonsRow.style.cssText = 'display:flex;align-items:center;gap:2px;';
+        timeTotal.textContent = '\u2013:\u2013\u2013';
+        timeTotal.style.cssText = 'font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9;min-width:40px;text-align:right;';
+        timelineRow.append(timeCur, timeline, timeTotal);
 
-        const makeButton = (label, title, action) => {
+        // --- Controls row: [-5s] [play] [+5s] on the left; popovers + download + fullscreen on the right. ---
+        const controlsRow = document.createElement('div');
+
+        controlsRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:4px;';
+
+        const leftGroup = document.createElement('div');
+
+        leftGroup.style.cssText = 'display:flex;align-items:center;gap:2px;';
+
+        const rightGroup = document.createElement('div');
+
+        rightGroup.style.cssText = 'display:flex;align-items:center;gap:2px;';
+        controlsRow.append(leftGroup, rightGroup);
+
+        const makeButton = (label, title, action, group = leftGroup) => {
           const button = document.createElement('span');
 
           button.textContent = label;
           button.title = title;
-          button.style.cssText = 'cursor:pointer;padding:2px 6px;';
+          button.style.cssText =
+            'cursor:pointer;padding:4px 10px;border-radius:6px;font-size:15px;line-height:1.2;transition:background 0.15s;';
+          button.addEventListener('mouseenter', () => (button.style.background = 'rgba(255,255,255,0.15)'));
+          button.addEventListener('mouseleave', () => (button.style.background = ''));
           button.addEventListener('click', event => {
             event.preventDefault();
             event.stopPropagation();
             action();
           });
-          buttonsRow.appendChild(button);
+          group.appendChild(button);
 
           return button;
         };
 
-        const playButton = makeButton(video.paused ? '▶' : '⏸', 'Play / Pause', () => {
+        const playButton = makeButton(video.paused ? '\u25B6' : '\u23F8', 'Play / Pause', () => {
           if (video.paused) {
             markUserPlay(video);
             markUserPlaying(video);
@@ -2386,74 +2411,140 @@
         });
 
         makeButton(
-          '⏪',
+          '\u23EA',
           `Back ${SEEK_SECONDS}s`,
           () => (video.currentTime = Math.max(0, video.currentTime - SEEK_SECONDS))
         );
-        makeButton('⏩', `Forward ${SEEK_SECONDS}s`, () => (video.currentTime += SEEK_SECONDS));
+        makeButton('\u23E9', `Forward ${SEEK_SECONDS}s`, () => (video.currentTime += SEEK_SECONDS));
 
-        const sep = document.createElement('span');
+        // Hidden pop-open popovers (hover or click) to save space in the controls row.
+        const attachPopover = (button, build) => {
+          const pop = document.createElement('div');
 
-        sep.textContent = '|';
-        sep.style.cssText = 'opacity:0.35;padding:0 2px;';
-        buttonsRow.appendChild(sep);
+          pop.style.cssText =
+            'position:absolute;bottom:34px;left:50%;transform:translateX(-50%);display:none;flex-direction:column;gap:6px;align-items:center;padding:10px 12px;background:rgba(20,20,20,0.95);border:1px solid rgba(255,255,255,0.15);border-radius:8px;white-space:nowrap;';
+          build(pop);
+          pop.addEventListener('click', event => event.stopPropagation());
+          pop.addEventListener('pointerdown', event => event.stopPropagation());
+          button.style.position = 'relative';
+          button.appendChild(pop);
 
-        const muteButton = makeButton(video.muted || !video.volume ? '🔇' : '🔊', 'Mute / Unmute', () => {
-          video.muted = !video.muted;
+          let hideTimer = null;
+
+          button.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimer);
+            pop.style.display = 'flex';
+          });
+          button.addEventListener('mouseleave', () => (hideTimer = setTimeout(() => (pop.style.display = 'none'), 300)));
+          pop.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+          pop.addEventListener('mouseleave', () => (hideTimer = setTimeout(() => (pop.style.display = 'none'), 300)));
+          button.addEventListener('click', () => {
+            pop.style.display = pop.style.display === 'flex' ? 'none' : 'flex';
+          });
+        };
+
+        // Volume (mute + slider) inside a popover.
+        const muteButton = makeButton(video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}', 'Volume', () => {}, rightGroup);
+
+        attachPopover(muteButton, pop => {
+          const row = document.createElement('div');
+
+          row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+          const toggle = document.createElement('span');
+
+          toggle.style.cssText = 'cursor:pointer;';
+
+          const slider = document.createElement('input');
+
+          slider.type = 'range';
+          slider.min = 0;
+          slider.max = 1;
+          slider.step = 0.05;
+          slider.value = video.muted ? 0 : video.volume;
+          slider.style.cssText = 'width:110px;accent-color:#ff2f70;cursor:pointer;';
+          slider.addEventListener('input', () => {
+            video.muted = false;
+            video.volume = +slider.value;
+          });
+          slider.addEventListener('pointerdown', event => event.stopPropagation());
+
+          const syncMute = () => (toggle.textContent = video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}');
+
+          toggle.addEventListener('click', () => (video.muted = !video.muted));
+          video.addEventListener('volumechange', () => {
+            syncMute();
+            slider.value = video.muted ? 0 : video.volume;
+          });
+          syncMute();
+          row.append(toggle, slider);
+          pop.appendChild(row);
         });
 
-        const volumeSlider = document.createElement('input');
-
-        volumeSlider.type = 'range';
-        volumeSlider.min = 0;
-        volumeSlider.max = 1;
-        volumeSlider.step = 0.05;
-        volumeSlider.value = video.muted ? 0 : video.volume;
-        volumeSlider.title = 'Volume';
-        volumeSlider.style.cssText = 'width:64px;accent-color:#ff2f70;cursor:pointer;';
-        volumeSlider.addEventListener('input', () => {
-          video.muted = false;
-          video.volume = +volumeSlider.value;
-        });
-        volumeSlider.addEventListener('pointerdown', event => event.stopPropagation());
-        buttonsRow.appendChild(volumeSlider);
-
-        const speedButton = makeButton(`${video.playbackRate}×`, 'Playback speed', () => {
-          const idx = SPEEDS.indexOf(video.playbackRate);
-
-          video.playbackRate = SPEEDS[(idx + 1) % SPEEDS.length] || 1;
-          speedButton.textContent = `${video.playbackRate}×`;
-        });
-
+        // Display size: menu in the overlay player; opens the overlay player on page videos.
         if (opts.overlay) {
-          // Size cycler for the centered overlay player (fit / real size / percentages).
-          const sizeLabel = () => {
-            const size = OVERLAY_SIZES[overlay?.sizeIdx ?? 0];
+          const sizeButton = makeButton('\u2922', 'Display size', () => {}, rightGroup);
 
-            return size === 'fit' ? '⤢ Fit' : `⤢ ${Math.round(size * 100)}%`;
-          };
+          attachPopover(sizeButton, pop => {
+            [
+              ['fit', 'Fit browser'],
+              [1, '100% (real size)'],
+              [1.5, '150%'],
+              [2, '200%']
+            ].forEach(([value, label]) => {
+              const option = document.createElement('div');
 
-          const sizeButton = makeButton(sizeLabel(), 'Display size: fit / real size / percentages', () => {
-            if (overlay) {
-              overlay.sizeIdx = (overlay.sizeIdx + 1) % OVERLAY_SIZES.length;
-              applyOverlaySize();
-              sizeButton.textContent = sizeLabel();
-            }
+              option.textContent = label;
+              option.style.cssText = 'cursor:pointer;padding:4px 8px;border-radius:5px;transition:background 0.15s;';
+              option.addEventListener('mouseenter', () => (option.style.background = 'rgba(255,255,255,0.15)'));
+              option.addEventListener('mouseleave', () => (option.style.background = ''));
+              option.addEventListener('click', () => {
+                overlay && ((overlay.size = value), applyOverlaySize());
+                pop.style.display = 'none';
+              });
+              pop.appendChild(option);
+            });
           });
         } else {
-          makeButton('⤢', 'Play in real size (centered)', () => openOverlay(video));
+          makeButton('\u2922', 'Play in real size (centered)', () => openOverlay(video), rightGroup);
         }
 
-        makeButton('↗', 'Open in new tab', () => {
-          const videoSrc = resolveVideoSrc(video);
+        // Playback speed: 0.5x - 4x slider inside a popover.
+        const speedButton = makeButton(`${video.playbackRate}\u00d7`, 'Playback speed', () => {}, rightGroup);
 
-          videoSrc &&
-            chrome.runtime.sendMessage({
-              cmd: 'OPEN_VIDEO_IN_NEW_TAB',
-              args: { videoSrc: new URL(videoSrc, location.origin).href }
-            });
+        attachPopover(speedButton, pop => {
+          const row = document.createElement('div');
+
+          row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+          const slider = document.createElement('input');
+
+          slider.type = 'range';
+          slider.min = 0.5;
+          slider.max = 4;
+          slider.step = 0.25;
+          slider.value = video.playbackRate;
+          slider.style.cssText = 'width:140px;accent-color:#ff2f70;cursor:pointer;';
+          slider.addEventListener('pointerdown', event => event.stopPropagation());
+
+          const label = document.createElement('span');
+
+          label.textContent = `${video.playbackRate}\u00d7`;
+          label.style.cssText = 'min-width:40px;text-align:center;';
+          slider.addEventListener('input', () => {
+            video.playbackRate = +slider.value;
+            label.textContent = `${slider.value}\u00d7`;
+            speedButton.textContent = `${slider.value}\u00d7`;
+          });
+          video.addEventListener('ratechange', () => {
+            label.textContent = `${video.playbackRate}\u00d7`;
+            speedButton.textContent = `${video.playbackRate}\u00d7`;
+          });
+          row.append(slider, label);
+          pop.appendChild(row);
         });
-        makeButton('⬇', 'Download video', () => {
+
+        makeButton('\u2B07', 'Download video', () => {
           const videoSrc = resolveVideoSrc(video);
 
           videoSrc &&
@@ -2461,74 +2552,101 @@
               cmd: 'DOWNLOAD_IMG',
               args: { imgSrc: new URL(videoSrc, location.origin).href, imgTitle: video.title || '' }
             });
-        });
-        makeButton('⛶', 'Fullscreen', () => {
+        }, rightGroup);
+
+        makeButton('\u26F6', 'Fullscreen', () => {
           if (document.fullscreenElement === video) {
             document.exitFullscreen();
           } else {
             video.controls = true; // Our bar cannot be displayed in fullscreen; fall back to the native controls.
             video.requestFullscreen().catch(() => {});
           }
-        });
+        }, rightGroup);
 
-        bar.append(timelineRow, buttonsRow);
-        (opts.container || document.documentElement).appendChild(bar);
+        bar.append(timelineRow, controlsRow);
+        host.appendChild(bar);
 
         if (!opts.overlay) {
-          // Small play badge shown in the center of the video while it is paused.
+          // Small play badge in the center of the video while it is paused (hover ~1s to play).
           playBadge = document.createElement('div');
 
           playBadge.className = 'photoShow photoshow-video-play-badge';
-          playBadge.textContent = '▶';
-          playBadge.title = 'Play';
+          playBadge.textContent = '\u25B6';
+          playBadge.title = 'Hover to play (or click)';
           playBadge.style.cssText =
-            'position:absolute;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;font-size:18px;cursor:pointer;z-index:2147483645;user-select:none;transition:opacity 0.25s;opacity:0;pointer-events:none;';
-          playBadge.addEventListener('click', event => {
-            event.preventDefault();
-            event.stopPropagation();
+            'position:absolute;display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,0.65);backdrop-filter:blur(3px);color:#fff;font-size:19px;cursor:pointer;z-index:2147483645;user-select:none;transition:opacity 0.25s;opacity:0;pointer-events:none;';
+          host.appendChild(playBadge);
+
+          let pointerOnVideo = false,
+            badgeHoverTimer = null;
+
+          video.addEventListener('mouseenter', () => (pointerOnVideo = true));
+          video.addEventListener('mouseleave', () => (pointerOnVideo = false));
+          playBadge.addEventListener('mouseenter', () => (pointerOnVideo = true));
+          playBadge.addEventListener('mouseleave', () => {
+            pointerOnVideo = false;
+            clearTimeout(badgeHoverTimer);
+          });
+
+          const startPlayback = () => {
             markUserPlay(video);
             markUserPlaying(video);
             video.muted = false;
             video.play().catch(() => {});
+          };
+
+          // Play after hovering the badge for about a second (avoids mis-clicks on sites
+          // where clicking a video opens a new page). Clicking the badge plays immediately.
+          playBadge.addEventListener('pointerenter', () => (badgeHoverTimer = setTimeout(startPlayback, 1000)));
+          ['pointerleave', 'pointercancel'].forEach(type =>
+            playBadge.addEventListener(type, () => clearTimeout(badgeHoverTimer))
+          );
+          playBadge.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            startPlayback();
           });
-          document.documentElement.appendChild(playBadge);
         }
 
         const syncTime = () => {
-          timeLabel.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+          timeCur.textContent = formatTime(video.currentTime);
+          timeTotal.textContent = formatTime(video.duration);
           timelineFill.style.width = video.duration ? `${(video.currentTime / video.duration) * 100}%` : '0';
           video.buffered.length &&
             video.duration &&
             (timelineBuffer.style.width = `${(video.buffered.end(video.buffered.length - 1) / video.duration) * 100}%`);
         };
-        const syncVolume = () => {
-          muteButton.textContent = video.muted || !video.volume ? '🔇' : '🔊';
-          volumeSlider.value = video.muted ? 0 : video.volume;
-        };
         const syncVisibility = () => {
-          // The full bar is visible only while playing (or in replace mode); a small
-          // play badge stays visible when paused so playback can be started again.
+          // The full bar is visible only while playing (or in replace mode / overlay);
+          // the play badge appears while paused and the pointer is over the video.
           const showFull = opts.overlay || controlMode() === 'always' || !video.paused;
 
           bar.style.opacity = showFull ? '1' : '0';
           bar.style.pointerEvents = showFull ? 'auto' : 'none';
 
-          playBadge &&
-            ((playBadge.style.opacity = showFull ? '0' : '1'),
-            (playBadge.style.pointerEvents = showFull ? 'none' : 'auto'));
+          if (playBadge) {
+            const showBadge = !showFull && pointerOnVideo;
+
+            playBadge.style.opacity = showBadge ? '1' : '0';
+            playBadge.style.pointerEvents = showBadge ? 'auto' : 'none';
+          }
         };
         const position = () => {
           const rect = video.getBoundingClientRect();
 
           if (video.isConnected && rect.width && rect.height) {
+            const hostRect = host.getBoundingClientRect(),
+              baseLeft = rect.left - hostRect.left,
+              baseTop = rect.top - hostRect.top;
+
             bar.style.display = 'flex';
-            bar.style.left = `${(opts.fixed ? rect.left : rect.left + window.scrollX) + rect.width / 2 - bar.offsetWidth / 2}px`;
-            bar.style.top = `${(opts.fixed ? rect.top : rect.top + window.scrollY) + rect.height - bar.offsetHeight - 8}px`;
-            bar.style.width = `${Math.max(rect.width, 180)}px`;
+            bar.style.left = `${baseLeft + rect.width / 2 - bar.offsetWidth / 2}px`;
+            bar.style.top = `${baseTop + rect.height - bar.offsetHeight - 8}px`;
+            bar.style.width = `${Math.max(rect.width, 200)}px`;
 
             playBadge &&
-              ((playBadge.style.left = `${(opts.fixed ? rect.left : rect.left + window.scrollX) + rect.width / 2 - 22}px`),
-              (playBadge.style.top = `${(opts.fixed ? rect.top : rect.top + window.scrollY) + rect.height / 2 - 22}px`));
+              ((playBadge.style.left = `${baseLeft + rect.width / 2 - 23}px`),
+              (playBadge.style.top = `${baseTop + rect.height / 2 - 23}px`));
           } else {
             bar.remove();
             playBadge && playBadge.remove();
@@ -2564,7 +2682,7 @@
         video.addEventListener('progress', syncTime);
         video.addEventListener('play', () => {
           syncVisibility();
-          playButton.textContent = '⏸';
+          playButton.textContent = '\u23F8';
         });
         video.addEventListener('pause', () => {
           video.currentTime > 1 &&
@@ -2572,9 +2690,11 @@
             (video.dataset.photoshowPausedAt = video.currentTime);
           delete video.dataset.photoshowUserPlaying;
           syncVisibility();
-          playButton.textContent = '▶';
+          playButton.textContent = '\u25B6';
         });
-        video.addEventListener('volumechange', syncVolume);
+        video.addEventListener('volumechange', () => {
+          muteButton.textContent = video.muted || !video.volume ? '\u{1F507}' : '\u{1F50A}';
+        });
 
         // Keep the bar glued to the video when its size changes.
         const ro = new ResizeObserver(() => position());
@@ -2582,6 +2702,7 @@
         ro.observe(video);
 
         position();
+        syncVisibility();
         setTimeout(position, 300); // In case the video size settles late.
         setTimeout(syncTime, 100);
 
@@ -2658,7 +2779,7 @@
               return; // Videos with their own player controls are left untouched.
             }
 
-            // Bandwidth saving: stop playback that was not initiated via the bar.
+            // Bandwidth saving: stop playback that was not initiated via the controls.
             !video.paused && !video.dataset.photoshowUserPlaying && video.pause();
             videoBars.set(video, buildBar(video));
           });
