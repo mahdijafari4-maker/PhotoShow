@@ -2337,6 +2337,15 @@
 
         const closePops = () => popups.forEach(pop => (pop.style.display = 'none'));
 
+        // Clicks anywhere inside the bar must never trigger the site's own click behaviors:
+        // video cards are often wrapped in an <a> (e.g. Civitai), and every click inside the
+        // bar would otherwise activate that link. Only the default action is suppressed here
+        // (in the capture phase); stopping the propagation is done by the per-element handlers,
+        // so our own button handlers still run.
+        ['mousedown', 'click', 'auxclick'].forEach(type =>
+          bar.addEventListener(type, event => event.preventDefault(), true)
+        );
+
         // --- Timeline row: current time (left) / seek bar / total time (right). ---
         const timelineRow = document.createElement('div');
 
