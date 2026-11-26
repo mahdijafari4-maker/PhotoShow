@@ -3840,6 +3840,43 @@ const tools = {
       statistics.update('imageDownloaded');
     }
   },
+  openVideoInNewTab: function (videoSrc, curTab, withDetails) {
+    if (videoSrc) {
+      try {
+        const referer = new URL(curTab.url)?.origin,
+          url = withDetails
+            ? chrome.runtime.getURL(`videoViewer/videoViewer.html?src=${encodeURIComponent(videoSrc)}`)
+            : videoSrc;
+
+        chrome.tabs.create(
+          {
+            url: url,
+            index: curTab.index + 1,
+            openerTabId: curTab.id,
+            active: true
+          },
+          tab => {
+            if (tab) {
+              TAB_ID_REFERER_MAPPTING[tab.id] = referer;
+            }
+          }
+        );
+      } catch (error) {}
+    }
+  },
+  copyText: function (text) {
+    if (text) {
+      const copyArea = document.createElement('textarea');
+
+      copyArea.value = text;
+      copyArea.style.position = 'fixed';
+      copyArea.style.opacity = '0';
+      document.body.appendChild(copyArea);
+      copyArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(copyArea);
+    }
+  },
   openImgInNewTab: function (imgSrc, curTab) {
     if (imgSrc) {
       try {
@@ -3953,6 +3990,7 @@ var photoShow = {
     }
   },
   enable: function (tabId, isWebsiteUnknown) {
+    photoShowContextMenus.create();
     chrome.browserAction.setIcon({
       tabId: tabId,
       path: 'resources/icon32.png'
@@ -4030,10 +4068,47 @@ var photoShow = {
 
 var photoShowContextMenus = {
   hasMenuCreated: false,
+  hasImageItemsCreated: false,
   create: function () {
     if (PHOTOSHOW_CONFIGS.contextMenu !== false && !this.hasMenuCreated) {
       chrome.contextMenus.create({
+        id: 'photoShowContextMenu_root',
+        title: 'PhotoShow',
+        contexts: ['all']
+      });
+
+      chrome.contextMenus.create({
+        id: 'photoShowContextMenu_video_open',
+        parentId: 'photoShowContextMenu_root',
+        title: chrome.i18n.getMessage('contextMenuTitle_video_open'),
+        contexts: ['video'],
+        onclick: (contextMenuInfo, tab) => chrome.runtime.lastError || tools.openVideoInNewTab(contextMenuInfo.srcUrl, tab)
+      });
+
+      chrome.contextMenus.create({
+        id: 'photoShowContextMenu_video_details',
+        parentId: 'photoShowContextMenu_root',
+        title: chrome.i18n.getMessage('contextMenuTitle_video_details'),
+        contexts: ['video'],
+        onclick: (contextMenuInfo, tab) =>
+          chrome.runtime.lastError || tools.openVideoInNewTab(contextMenuInfo.srcUrl, tab, true)
+      });
+
+      chrome.contextMenus.create({
+        id: 'photoShowContextMenu_video_copy',
+        parentId: 'photoShowContextMenu_root',
+        title: chrome.i18n.getMessage('contextMenuTitle_video_copy'),
+        contexts: ['video'],
+        onclick: (contextMenuInfo, tab) => chrome.runtime.lastError || tools.copyText(contextMenuInfo.srcUrl)
+      });
+
+      this.hasMenuCreated = true;
+    }
+
+    if (PHOTOSHOW_CONFIGS.contextMenu !== false && !this.hasImageItemsCreated) {
+      chrome.contextMenus.create({
         id: 'photoShowContextMenu_open',
+        parentId: 'photoShowContextMenu_root',
         title: chrome.i18n.getMessage('contextMenuTitle_open'),
         contexts: ['all'],
         onclick: (contextMenuInfo, tab) =>
@@ -4043,6 +4118,7 @@ var photoShowContextMenus = {
       // TODO: Need to display a download message when the download process cannot be triggered immediately.
       chrome.contextMenus.create({
         id: 'photoShowContextMenu_save',
+        parentId: 'photoShowContextMenu_root',
         title: chrome.i18n.getMessage('contextMenuTitle_save'),
         contexts: ['all'],
         onclick: (contextMenuInfo, tab) =>
@@ -4052,16 +4128,24 @@ var photoShowContextMenus = {
 
       chrome.contextMenus.create({
         id: 'photoShowContextMenu_copy',
+        parentId: 'photoShowContextMenu_root',
         title: chrome.i18n.getMessage('contextMenuTitle_copy'),
         contexts: ['all'],
         onclick: (contextMenuInfo, tab) => chrome.runtime.lastError || photoShow.copyImgSrc(tab.id)
       });
 
-      this.hasMenuCreated = true;
+      this.hasImageItemsCreated = true;
     }
+  },
+  removeImageItems: function () {
+    ['photoShowContextMenu_open', 'photoShowContextMenu_save', 'photoShowContextMenu_copy'].forEach(id =>
+      chrome.contextMenus.remove(id, () => chrome.runtime.lastError)
+    );
+    this.hasImageItemsCreated = false;
   },
   remove: function () {
     this.hasMenuCreated = false;
+    this.hasImageItemsCreated = false;
     chrome.contextMenus.removeAll();
   }
 };
@@ -4200,8 +4284,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       break;
 
     case 'VIEW_IMAGE': // Args: hasSrc
-      photoShowContextMenus[request.args.hasSrc ? 'create' : 'remove'].call(photoShowContextMenus, sender.tab.id);
+      request.args.hasSrc
+        ? photoShowContextMenus.create.call(photoShowContextMenus, sender.tab.id)
+        : photoShowContextMenus.removeImageItems.call(photoShowContextMenus, sender.tab.id);
       request.args.hasSrc && statistics.update('imageViewed');
+
+      break;
+
+    case 'PROBE_VIDEO': // Args: videoSrc
+      needAsyncResponse = true;
+
+      fetch(request.args.videoSrc, { method: 'HEAD' })
+        .catch(() => fetch(request.args.videoSrc, { headers: { Range: 'bytes=0-0' } }))
+        .then(response =>
+          sendResponse({
+            ok: response.ok,
+            type: response.headers.get('content-type'),
+            size: response.headers.get('content-length') || response.headers.get('content-range')
+          })
+        )
+        .catch(() => sendResponse());
 
       break;
 
@@ -4456,6 +4558,8 @@ chrome.storage.sync.get(['blocklist', 'disabledWebsites', 'whitelist', 'photoSho
     statistics.init(response.statistics);
 
     setPhotoShowDeterminingFilenameHandler(!!PHOTOSHOW_CONFIGS.fileNaming?.pattern);
+
+    photoShowContextMenus.create();
 
     ////////////////////////////////////////////////////////////////////////////////
     // Remove later.

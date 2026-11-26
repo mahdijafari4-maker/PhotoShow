@@ -72,6 +72,18 @@
     "message": "Copy HD image address (C)",
     "description": "Context menu item."
   },
+  "contextMenuTitle_video_open": {
+    "message": "Open video in new tab (direct link)",
+    "description": "Context menu item."
+  },
+  "contextMenuTitle_video_details": {
+    "message": "Open video in new tab (with details)",
+    "description": "Context menu item."
+  },
+  "contextMenuTitle_video_copy": {
+    "message": "Copy video direct link",
+    "description": "Context menu item."
+  },
   "globalMsg_imgWillOpenInNewTab": {
     "message": "HD image will open in a new tab soon.",
     "description": "Global message."

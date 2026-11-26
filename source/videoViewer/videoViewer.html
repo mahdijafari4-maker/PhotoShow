@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>PhotoShow - Video</title>
+    <style>
+      body { margin: 0; background: #111; color: #eee; font-family: 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+      video { max-width: 100%; max-height: 70vh; background: #000; outline: none; }
+      #details { width: 90%; max-width: 960px; margin: 16px auto 32px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      td { padding: 6px 10px; border-top: 1px solid #333; word-break: break-all; vertical-align: top; }
+      td.key { color: #6cbcef; font-weight: 600; white-space: nowrap; width: 1%; }
+    </style>
+  </head>
+  <body>
+    <video id="player" controls autoplay></video>
+    <div id="details"></div>
+    <script src="videoViewer.js"></script>
+  </body>
+</html>
