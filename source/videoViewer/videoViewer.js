@@ -52,6 +52,84 @@
       .join('')}</table>`;
   };
 
+    const parseTotalSize = sizeHeader => {
+    if (!sizeHeader) return NaN;
+    const rangeMatch = String(sizeHeader).match(/bytes \S+\/(\d+)/);
+    return rangeMatch ? +rangeMatch[1] : +sizeHeader;
+  };
+
+  // Discovers sibling container formats (.webm <-> .mp4) and size variants
+  // such as Civitai's '.../transcode=true,width=NNN,optimized=true/...' pattern.
+  const buildVariants = src => {
+    const variants = [];
+
+    if (/\.(webm|mp4|mov|mkv|avi|m4v)(?=$|\?)/i.test(src)) {
+      const swapped = src.replace(/\.(webm|mp4|mov|mkv|avi|m4v)(?=$|\?)/i, match => {
+        const map = { '.webm': '.mp4', '.mp4': '.webm', '.mov': '.mp4', '.mkv': '.mp4', '.avi': '.mp4', '.m4v': '.mp4' };
+        return map[match.toLowerCase()] || match;
+      });
+
+      swapped !== src && variants.push({ label: 'other format', url: swapped });
+    }
+
+    if (/width=[^,/$]+/i.test(src)) {
+      ['width=original', 'width=1080', 'width=720', 'width=450'].forEach(width =>
+        variants.push({ label: width.replace('width=', 'width '), url: src.replace(/width=[^,/$]+/i, width) })
+      );
+    }
+
+    return variants.filter(variant => variant.url !== src);
+  };
+
+  const probeVariants = () => {
+    const variants = buildVariants(videoSrc);
+
+    if (!variants.length) return;
+
+    const probed = new Array(variants.length).fill(null);
+    let pending = variants.length;
+
+    const renderVariants = () => {
+      const rows = probed
+        .map((info, index) => ({ ...variants[index], info }))
+        .filter(({ url, info }) => url === videoSrc || (info && info.ok !== false));
+
+      if (pending && !rows.some(({ info }) => info)) return;
+
+      document.getElementById('variants')?.remove();
+      if (!rows.length) return;
+
+      const section = document.createElement('div');
+      section.id = 'variants';
+      section.innerHTML = `<h3>Available formats &amp; sizes</h3><ul>${rows
+        .map((row, index) => {
+          const size = row.info ? formatBytes(parseTotalSize(row.info.size)) : 'checking…';
+          return `<li><a href="#" data-url="${row.url}">${row.label}</a> — ${size}` +
+            (row.info?.finalUrl ? ` <a href="${row.info.finalUrl}" target="_blank">[direct link]</a>` : '') +
+            `</li>`;
+        })
+        .join('')}</ul>`;
+      section.querySelectorAll('a[data-url]').forEach(link =>
+        link.addEventListener('click', event => {
+          event.preventDefault();
+          player.src = link.dataset.url;
+          probeInfo = undefined;
+          render();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        })
+      );
+      details.after(section);
+    };
+
+    variants.forEach((variant, index) =>
+      chrome.runtime.sendMessage({ cmd: 'PROBE_VIDEO', args: { videoSrc: variant.url } }, info => {
+        if (!chrome.runtime.lastError) probed[index] = info;
+        pending -= 1;
+        renderVariants();
+      })
+    );
+  };
+
   if (videoSrc) {
     player.src = videoSrc;
     player.addEventListener('loadedmetadata', render);
@@ -60,6 +138,7 @@
       if (!chrome.runtime.lastError) {
         probeInfo = info;
         render();
+        probeVariants();
       }
     });
   } else {

@@ -4294,13 +4294,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'PROBE_VIDEO': // Args: videoSrc
       needAsyncResponse = true;
 
-      fetch(request.args.videoSrc, { method: 'HEAD' })
-        .catch(() => fetch(request.args.videoSrc, { headers: { Range: 'bytes=0-0' } }))
+      // A ranged GET is used instead of HEAD because some CDNs (e.g. Civitai) answer HEAD with no headers.
+      // The 'content-range' of 'bytes=0-0' carries the full file size, and 'response.url' carries the final URL after redirects.
+      fetch(request.args.videoSrc, { headers: { Range: 'bytes=0-0' } })
+        .catch(() => fetch(request.args.videoSrc, { method: 'HEAD' }))
         .then(response =>
           sendResponse({
             ok: response.ok,
             type: response.headers.get('content-type'),
-            size: response.headers.get('content-length') || response.headers.get('content-range')
+            size: response.headers.get('content-range') || response.headers.get('content-length'),
+            finalUrl: response.url
           })
         )
         .catch(() => sendResponse());
