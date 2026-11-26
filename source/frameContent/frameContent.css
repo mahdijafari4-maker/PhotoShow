@@ -1,0 +1,179 @@
+/**
+ * Copyright (c) 2012-2022 Vincent W., MIT-licensed.
+ * @fileOverview PhotoShow content style for iframes.
+ * @author Vincent | vincentwang863@gmail.com
+ * @version 4.11.0.0 | 2021-10-21 | Vincent   // Initial version.
+ */
+/**
+ * Copyright (c) 2012-2022 Vincent W., MIT-licensed.
+ * @fileOverview PhotoShow content style - image loader styles.
+ * @author Vincent | vincentwang863@gmail.com
+ * @version 4.11.0.0 | 2021-10-21 | Vincent   // Initial version.
+ * @version 4.15.0.0 | 2022-03-27 | Vincent   // Updates: Clean duplicated code.
+ */
+@keyframes photoshow-img-loading-ani {
+  0% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 0deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 0deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  5% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 18deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 18deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  10% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 36deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 36deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  15% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 54deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 54deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  20% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 72deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 72deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  25% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 90deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 90deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  30% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 108deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 108deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  35% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 126deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 126deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  40% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 144deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 144deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  45% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 162deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 162deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  50% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 180deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 180deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  55.00000000000001% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 198deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 198deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  60% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 216deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 216deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  65% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 234deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 234deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  70% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 252deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 252deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  75% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 270deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 270deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  80% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 288deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 288deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  85% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 306deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 306deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  90% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 324deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 324deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  95% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 342deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 342deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+  100% {
+    -webkit-mask-image: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 360deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+    mask: radial-gradient(circle closest-side, #fff 15%, transparent 16%, transparent 19%, #fff 20%), conic-gradient(from 360deg, #fff 12.5%, rgba(255, 255, 255, 0.25) 75%);
+  }
+}
+.photoshow-img-loading {
+  animation: photoshow-img-loading-ani 0.8s linear infinite !important;
+}
+@keyframes photoshow-img-loading-fail-ani {
+  0% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  1% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(54deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-36deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(54deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-36deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  2% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(63deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-27deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(63deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-27deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  3% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(72deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-18deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(72deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-18deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  4% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(81deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-9deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(81deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(-9deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  5% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(90deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(0deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(90deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(0deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  6% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(99deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(9deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(99deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(9deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  6.999999999999999% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(108deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(18deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(108deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(18deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  8% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(117deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(27deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(117deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(27deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  9% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(126deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(36deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(126deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(36deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  10% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(135deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(135deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+  100% {
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(135deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    mask: radial-gradient(circle closest-side, transparent 20%, #fff 20%), linear-gradient(135deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), linear-gradient(45deg, #fff 49.5%, rgba(255, 255, 255, 0.25) 49.6%, rgba(255, 255, 255, 0.25) 50.4%, #fff 50.5%), radial-gradient(circle closest-side, transparent 20%, #fff 20%);
+    -webkit-mask-composite: xor, source-in, source-out;
+    mask-composite: exclude, intersect, subtract;
+  }
+}
+.photoshow-img-loading-fail {
+  animation: photoshow-img-loading-fail-ani 2s ease forwards !important;
+}
