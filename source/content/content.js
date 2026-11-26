@@ -655,59 +655,66 @@
         );
       }
     },
+    // Manifest V3: inline script injection into the page is blocked by strict page CSPs
+    // (e.g. Civitai), so the hotkey deconflict agent runs directly in the content-script
+    // world and reads the current hotkey configuration live instead of interpolated values.
     toggleHotkeyDeconflictAgent: function (isEnabled) {
       if (isEnabled) {
-        tools.executeScript(`
-          if (!window.photoShowHotkeyDeconflictHook) {
-            window.photoShowHotkeyDeconflictHook = e => {
-              const eventKey = e.key?.toUpperCase(),
-                imgViewer = document.getElementById('photoShowViewer'),
-                isViewerActive = imgViewer?.dataset.active != undefined,
-                hasImgShown = imgViewer?.dataset.imgShown != undefined,
-                hasMask = imgViewer?.dataset.hasMask != undefined,
-                isActiveElementAnInput = /^text(?:area)?$/.test(document.activeElement.type) || document.activeElement.isContentEditable;
+        if (!window.photoShowHotkeyDeconflictHook) {
+          window.photoShowHotkeyDeconflictHook = e => {
+            const eventKey = e.key?.toUpperCase(),
+              imgViewer = document.getElementById('photoShowViewer'),
+              isViewerActive = imgViewer?.dataset.active != undefined,
+              hasImgShown = imgViewer?.dataset.imgShown != undefined,
+              hasMask = imgViewer?.dataset.hasMask != undefined,
+              isActiveElementAnInput =
+                /^text(?:area)?$/.test(document.activeElement.type) || document.activeElement.isContentEditable;
 
-              if (isViewerActive) {
-                if((eventKey === 'TAB' && ${this.config.hotkeys.openImageInNewTab.isEnabled} ||
-                  eventKey === 'C' && ${
-                    this.config.hotkeys.copyImageAddress.isEnabled
-                  } && !(e.ctrlKey && e.shiftKey) && !isActiveElementAnInput ||
-                  eventKey === 'S' && ${this.config.hotkeys.saveImage.isEnabled} && !isActiveElementAnInput ||
-                  eventKey === '${this.config.activationMode?.toUpperCase()}') && ((!isActiveElementAnInput && !window.getSelection().toString()) || hasImgShown)) {
-                  e.preventDefault();
+            if (isViewerActive) {
+              if (
+                (eventKey === 'TAB' && photoShow.config.hotkeys.openImageInNewTab.isEnabled ||
+                  eventKey === 'C' &&
+                    photoShow.config.hotkeys.copyImageAddress.isEnabled &&
+                    !(e.ctrlKey && e.shiftKey) &&
+                    !isActiveElementAnInput ||
+                  eventKey === 'S' && photoShow.config.hotkeys.saveImage.isEnabled && !isActiveElementAnInput ||
+                  eventKey === (photoShow.config.activationMode || '').toUpperCase()) &&
+                ((!isActiveElementAnInput && !window.getSelection().toString()) || hasImgShown)
+              ) {
+                e.preventDefault();
+              }
+
+              if (hasImgShown) {
+                if (
+                  eventKey == 'ESCAPE' && photoShow.config.hotkeys.closeViewer.isEnabled ||
+                  /^ARROW(?:LEFT|RIGHT)$/.test(eventKey) &&
+                    e.shiftKey &&
+                    e.ctrlKey &&
+                    photoShow.config.hotkeys.rotateImage.isEnabled
+                ) {
+                  isActiveElementAnInput || e.preventDefault();
                 }
 
-                if (hasImgShown) {
-                  if(eventKey == 'ESCAPE' && ${this.config.hotkeys.closeViewer.isEnabled} ||
-                    /^ARROW(?:LEFT|RIGHT)$/.test(eventKey) && e.shiftKey && e.ctrlKey && ${
-                      this.config.hotkeys.rotateImage.isEnabled
-                    }) {
-                    isActiveElementAnInput || e.preventDefault();
-                  }
-
-                  if (hasMask && (
-                      /^PAGE(?:UP|DOWN)$/.test(eventKey) && ${this.config.hotkeys.scrollImageByPage.isEnabled} ||
-                      /^(?:END|HOME)$/.test(eventKey) && ${this.config.hotkeys.scrollImageToEnds.isEnabled} ||
-                      /^ARROW(?:UP|RIGHT|DOWN|LEFT)$/.test(eventKey) && ${this.config.hotkeys.scrollImage.isEnabled} ||
-                      /^(?:A|L|M|P)$/.test(eventKey) && ${this.config.hotkeys.switchViewMode.isEnabled})
-                    ) {
-                    isActiveElementAnInput || e.preventDefault();
-                  }
+                if (
+                  hasMask &&
+                  (/^PAGE(?:UP|DOWN)$/.test(eventKey) && photoShow.config.hotkeys.scrollImageByPage.isEnabled ||
+                    /^(?:END|HOME)$/.test(eventKey) && photoShow.config.hotkeys.scrollImageToEnds.isEnabled ||
+                    /^ARROW(?:UP|RIGHT|DOWN|LEFT)$/.test(eventKey) && photoShow.config.hotkeys.scrollImage.isEnabled ||
+                    /^(?:A|L|M|P)$/.test(eventKey) && photoShow.config.hotkeys.switchViewMode.isEnabled)
+                ) {
+                  isActiveElementAnInput || e.preventDefault();
                 }
               }
-            };
+            }
+          };
 
-            document.addEventListener('keydown', window.photoShowHotkeyDeconflictHook, true);
-            document.addEventListener('keyup', window.photoShowHotkeyDeconflictHook, true);
-          }
-        `);
-      } else {
-        tools.executeScript(`
-          if (window.photoShowHotkeyDeconflictHook) {
-            document.removeEventListener('keydown', window.photoShowHotkeyDeconflictHook, true);
-            document.removeEventListener('keyup', window.photoShowHotkeyDeconflictHook, true);
-            delete window.photoShowHotkeyDeconflictHook;
-          }`);
+          document.addEventListener('keydown', window.photoShowHotkeyDeconflictHook, true);
+          document.addEventListener('keyup', window.photoShowHotkeyDeconflictHook, true);
+        }
+      } else if (window.photoShowHotkeyDeconflictHook) {
+        document.removeEventListener('keydown', window.photoShowHotkeyDeconflictHook, true);
+        document.removeEventListener('keyup', window.photoShowHotkeyDeconflictHook, true);
+        delete window.photoShowHotkeyDeconflictHook;
       }
     },
     updateStateAndConfigs: function () {

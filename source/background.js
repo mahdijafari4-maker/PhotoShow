@@ -4098,7 +4098,6 @@ var photoShowContextMenus = {
         parentId: 'photoShowContextMenu_root',
         title: chrome.i18n.getMessage('contextMenuTitle_video_open'),
         contexts: ['video'],
-        onclick: (contextMenuInfo, tab) => chrome.runtime.lastError || tools.openVideoInNewTab(contextMenuInfo.srcUrl, tab)
       });
 
       chrome.contextMenus.create({
@@ -4106,8 +4105,6 @@ var photoShowContextMenus = {
         parentId: 'photoShowContextMenu_root',
         title: chrome.i18n.getMessage('contextMenuTitle_video_details'),
         contexts: ['video'],
-        onclick: (contextMenuInfo, tab) =>
-          chrome.runtime.lastError || tools.openVideoInNewTab(contextMenuInfo.srcUrl, tab, true)
       });
 
       chrome.contextMenus.create({
@@ -4115,7 +4112,6 @@ var photoShowContextMenus = {
         parentId: 'photoShowContextMenu_root',
         title: chrome.i18n.getMessage('contextMenuTitle_video_copy'),
         contexts: ['video'],
-        onclick: (contextMenuInfo, tab) => chrome.runtime.lastError || tools.copyText(contextMenuInfo.srcUrl, tab.id)
       });
 
       this.hasMenuCreated = true;
@@ -4127,8 +4123,6 @@ var photoShowContextMenus = {
         parentId: 'photoShowContextMenu_root',
         title: chrome.i18n.getMessage('contextMenuTitle_open'),
         contexts: ['all'],
-        onclick: (contextMenuInfo, tab) =>
-          chrome.runtime.lastError || photoShow.getPreservedImg(tab.id, ({ src }) => tools.openImgInNewTab(src, tab))
       });
 
       // TODO: Need to display a download message when the download process cannot be triggered immediately.
@@ -4137,9 +4131,6 @@ var photoShowContextMenus = {
         parentId: 'photoShowContextMenu_root',
         title: chrome.i18n.getMessage('contextMenuTitle_save'),
         contexts: ['all'],
-        onclick: (contextMenuInfo, tab) =>
-          chrome.runtime.lastError ||
-          photoShow.getPreservedImg(tab.id, ({ src, title }) => tools.downloadImg(src, title, tab.url))
       });
 
       chrome.contextMenus.create({
@@ -4147,7 +4138,6 @@ var photoShowContextMenus = {
         parentId: 'photoShowContextMenu_root',
         title: chrome.i18n.getMessage('contextMenuTitle_copy'),
         contexts: ['all'],
-        onclick: (contextMenuInfo, tab) => chrome.runtime.lastError || photoShow.copyImgSrc(tab.id)
       });
 
       this.hasImageItemsCreated = true;
@@ -4165,6 +4155,44 @@ var photoShowContextMenus = {
     chrome.contextMenus.removeAll();
   }
 };
+
+// Manifest V3: service workers cannot pass an 'onclick' parameter to chrome.contextMenus.create,
+// so all context menu actions are dispatched from the onClicked event instead.
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  switch (info.menuItemId) {
+    case 'photoShowContextMenu_open':
+      photoShow.getPreservedImg(tab.id, ({ src }) => tools.openImgInNewTab(src, tab));
+
+      break;
+
+    case 'photoShowContextMenu_save':
+      photoShow.getPreservedImg(tab.id, ({ src, title }) => tools.downloadImg(src, title, tab.url));
+
+      break;
+
+    case 'photoShowContextMenu_copy':
+      photoShow.copyImgSrc(tab.id);
+
+      break;
+
+    case 'photoShowContextMenu_video_open':
+      tools.openVideoInNewTab(info.srcUrl, tab);
+
+      break;
+
+    case 'photoShowContextMenu_video_details':
+      tools.openVideoInNewTab(info.srcUrl, tab, true);
+
+      break;
+
+    case 'photoShowContextMenu_video_copy':
+      tools.copyText(info.srcUrl, tab?.id);
+
+      break;
+
+    default:
+  }
+});
 
 var statistics = {
   data: {
