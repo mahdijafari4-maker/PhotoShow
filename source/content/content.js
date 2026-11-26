@@ -2167,6 +2167,7 @@
     // Initialize viewer.
     photoShowViewer.viewerShadow = $('.photoshow-viewer-shadow', photoShowViewer.viewerBox);
     photoShowViewer.viewerImg = $('img', photoShowViewer.viewerBox);
+    photoShowViewer.viewerVideo = $('video', photoShowViewer.viewerBox);
     photoShowViewer.viewModeSwitchTip = $('.photoshow-view-mode-switch-tip', photoShowViewer.viewerBox);
     photoShowViewer.viewerImgSizeTip = $('.photoshow-img-size', photoShowViewer.viewerBox);
 
@@ -2402,6 +2403,7 @@
           }
         });
 
+        bar.append(timelineRow, buttonsRow);
         document.documentElement.appendChild(bar);
 
         const syncTime = () => {
