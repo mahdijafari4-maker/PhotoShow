@@ -210,6 +210,21 @@
       var needAsyncResponse;
 
       switch (request.cmd) {
+        case 'COPY_TEXT': // Args: text
+          navigator.clipboard?.writeText(request.args.text).catch(() => {
+            const copyArea = document.createElement('textarea');
+
+            copyArea.value = request.args.text;
+            copyArea.style.position = 'fixed';
+            copyArea.style.opacity = '0';
+            document.body.appendChild(copyArea);
+            copyArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(copyArea);
+          });
+
+          break;
+
         case 'TOGGLE_DEVELOPER_MODE':
           photoShow.isInDeveloperMode = request.args.isInDeveloperMode;
           photoShowViewer.toggle();

@@ -33,14 +33,14 @@
       "strict_min_version": "62.0" // Required for Array.flatMap() method.
     }
   },
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "__MSG_extensionName__",
   "description": "__MSG_extensionDesc__",
-  "version": "4.37.2",
-  "version_name": "4.37.2",
+  "version": "4.38.0",
+  "version_name": "4.38.0",
   "author": "Vincent W.",
   "default_locale": "en",
-  "minimum_chrome_version": "69", // Required for Array.flatMap() method.
+  "minimum_chrome_version": "96", // Required for Array.flatMap() method.
   "icons": {
     "16": "resources/icon16.png",
     "24": "resources/icon24.png",
@@ -51,20 +51,22 @@
     "128": "resources/icon128.png"
   },
   "background": {
-    "scripts": ["jquery-3.6.0.min.js", "background.js"]
+    "service_worker": "background.js"
   },
   "devtools_page": "devtools/devtools.html",
   "permissions": [
-    "http://*/*",
-    "https://*/*",
     "tabs",
     "downloads",
     "contextMenus",
     "storage",
-    "webRequest",
-    "webRequestBlocking"
+    "clipboardWrite",
+    "declarativeNetRequest"
   ],
-  "browser_action": {
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "action": {
     "default_icon": {
       "16": "resources/icon16.png",
       "32": "resources/icon32.png"
@@ -86,7 +88,12 @@
       "all_frames": true
     }
   ],
-  "web_accessible_resources": ["resources/photoShowIcons.woff2", "resources/photoShowIcons.woff"],
+  "web_accessible_resources": [
+    {
+      "resources": ["resources/photoShowIcons.woff2", "resources/photoShowIcons.woff"],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ],
   "commands": {
     "togglePhotoShow": {
       "suggested_key": {

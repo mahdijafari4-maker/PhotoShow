@@ -3742,6 +3742,27 @@ const tools = {
     const url = sourceUrl && new URL(sourceUrl);
     return (url && /^http/.test(url.protocol) && url.hostname) || '';
   },
+  // Manifest V3: blocking webRequest is unavailable, so per-tab 'Referer' header
+  // injection is done with declarativeNetRequest session rules instead.
+  setTabReferer: function (tabId, referer) {
+    chrome.declarativeNetRequest.updateSessionRules({
+      removeRuleIds: [tabId],
+      addRules: [
+        {
+          id: tabId,
+          priority: 1,
+          action: {
+            type: 'modifyHeaders',
+            requestHeaders: [{ header: 'Referer', operation: 'set', value: referer }]
+          },
+          condition: {
+            tabIds: [tabId],
+            resourceTypes: ['main_frame', 'image', 'media', 'xmlhttprequest']
+          }
+        }
+      ]
+    });
+  },
   getDownloadFilename: function (hostname, imgSrc, imgTitle, originalFilename, downloadTime) {
     const timestamp = new Date(downloadTime || Date.now()),
       filename =
@@ -3782,29 +3803,35 @@ const tools = {
       if (
         [].concat(WEBSITE_INFO[tabUrl.hostname]?.websiteConfig?.xhrDownload || []).includes(new URL(imgSrc).hostname)
       ) {
-        let xhr = new XMLHttpRequest();
+        // Manifest V3: the service worker has neither XMLHttpRequest nor URL.createObjectURL,
+        // so the file is fetched, converted to a data URL, and handed to the downloads API.
+        fetch(imgSrc, { headers: { 'photoshow-added-referer': tabUrl.origin } })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
 
-        xhr.open('GET', imgSrc, true);
-        xhr.responseType = 'blob';
-        xhr.setRequestHeader('photoshow-added-referer', tabUrl.origin);
+            return response.arrayBuffer();
+          })
+          .then(buffer => {
+            let binary = '';
+            const bytes = new Uint8Array(buffer),
+              chunkSize = 0x8000;
 
-        xhr.addEventListener('load', e => {
-          if (e.target.status == 200) {
-            const blobUrl = URL.createObjectURL(xhr.response);
+            for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+              binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+            }
 
             chrome.downloads.download(
               {
                 filename,
-                url: blobUrl,
+                url: `data:application/octet-stream;base64,${btoa(binary)}`,
                 conflictAction: 'uniquify',
                 saveAs: alwaysAsk
               },
               downloadItemId => {
-                if (chrome.runtime.lastError || !downloadItemId) {
-                  URL.revokeObjectURL(blobUrl);
-                } else {
+                if (!chrome.runtime.lastError && downloadItemId) {
                   DOWNLOAD_ITMES[downloadItemId] = {
-                    blobUrl: blobUrl,
                     src: imgSrc,
                     title: imgTitle,
                     hostname: tabUrl.hostname
@@ -3812,12 +3839,8 @@ const tools = {
                 }
               }
             );
-
-            xhr = null;
-          }
-        });
-
-        xhr.send();
+          })
+          .catch(() => {});
       } else {
         chrome.downloads.download(
           {
@@ -3857,24 +3880,17 @@ const tools = {
           },
           tab => {
             if (tab) {
-              TAB_ID_REFERER_MAPPTING[tab.id] = referer;
+              tools.setTabReferer(tab.id, referer);
             }
           }
         );
       } catch (error) {}
     }
   },
-  copyText: function (text) {
-    if (text) {
-      const copyArea = document.createElement('textarea');
-
-      copyArea.value = text;
-      copyArea.style.position = 'fixed';
-      copyArea.style.opacity = '0';
-      document.body.appendChild(copyArea);
-      copyArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(copyArea);
+  // Manifest V3: the service worker has no DOM, so copying is delegated to the content script of the tab.
+  copyText: function (text, tabId) {
+    if (text && tabId) {
+      chrome.tabs.sendMessage(tabId, { cmd: 'COPY_TEXT', args: { text: text } }, () => chrome.runtime.lastError);
     }
   },
   openImgInNewTab: function (imgSrc, curTab) {
@@ -3891,7 +3907,7 @@ const tools = {
           },
           tab => {
             if (tab) {
-              TAB_ID_REFERER_MAPPTING[tab.id] = referer;
+              tools.setTabReferer(tab.id, referer);
             }
           }
         );
@@ -3974,7 +3990,7 @@ var photoShow = {
     var urlHostname = tools.getUrlHostname(tabUrl);
 
     if (urlHostname) {
-      chrome.browserAction.enable(tabId);
+      chrome.action.enable(tabId);
 
       if (WEBSITE_INFO[urlHostname]?.isWebsiteUnknown && PHOTOSHOW_CONFIGS.worksEverywhere === false) {
         photoShow.shutDown(tabId);
@@ -3991,49 +4007,49 @@ var photoShow = {
   },
   enable: function (tabId, isWebsiteUnknown) {
     photoShowContextMenus.create();
-    chrome.browserAction.setIcon({
+    chrome.action.setIcon({
       tabId: tabId,
       path: 'resources/icon32.png'
     });
-    chrome.browserAction.setTitle({
+    chrome.action.setTitle({
       tabId: tabId,
       title: chrome.i18n.getMessage(`photoShowEnabledMsg${isWebsiteUnknown ? '_basic' : ''}`)
     });
   },
   disable: function (tabId) {
-    chrome.browserAction.setIcon({
+    chrome.action.setIcon({
       tabId: tabId,
       path: 'resources/icon32_disabled.png'
     });
-    chrome.browserAction.setTitle({
+    chrome.action.setTitle({
       tabId: tabId,
       title: chrome.i18n.getMessage('photoShowDisabledMsg')
     });
   },
   shutDown: function (tabId, reason) {
-    chrome.browserAction.setIcon({
+    chrome.action.setIcon({
       tabId: tabId,
       path: 'resources/icon32_unavailable.png'
     });
 
     switch (reason) {
       case 'SUSPENDED':
-        chrome.browserAction.setTitle({
+        chrome.action.setTitle({
           tabId: tabId,
           title: chrome.i18n.getMessage('photoShowSuspendedMsg')
         });
         break;
 
       case 'UNAVAILABLE':
-        chrome.browserAction.setTitle({
+        chrome.action.setTitle({
           tabId: tabId,
           title: chrome.i18n.getMessage('photoShowUnavailableMsg')
         });
-        chrome.browserAction.disable(tabId);
+        chrome.action.disable(tabId);
         break;
 
       default:
-        chrome.browserAction.setTitle({
+        chrome.action.setTitle({
           tabId: tabId,
           title: chrome.i18n.getMessage('photoShowShutdownMsg')
         });
@@ -4099,7 +4115,7 @@ var photoShowContextMenus = {
         parentId: 'photoShowContextMenu_root',
         title: chrome.i18n.getMessage('contextMenuTitle_video_copy'),
         contexts: ['video'],
-        onclick: (contextMenuInfo, tab) => chrome.runtime.lastError || tools.copyText(contextMenuInfo.srcUrl)
+        onclick: (contextMenuInfo, tab) => chrome.runtime.lastError || tools.copyText(contextMenuInfo.srcUrl, tab.id)
       });
 
       this.hasMenuCreated = true;
@@ -4429,60 +4445,18 @@ chrome.storage.onChanged.addListener(changes => {
   );
 });
 
-// Note:
-// The value 'extraHeaders' of the third argument is not supported (neither needed) by Firefox,
-// it will be removed during compilation.
-chrome.webRequest.onBeforeSendHeaders.addListener(
-  details => {
-    switch (details.type) {
-      case 'xmlhttprequest':
-        const photoshowAddedHeaders = details.requestHeaders.reduce(
-          (acc, { name, value }) =>
-            /^photoshow-added-(.+)/.test(name)
-              ? {
-                  namesPattern: [...(acc.namesPattern || []), RegExp.$1],
-                  headers: [...(acc.headers || []), { name: RegExp.$1, value }]
-                }
-              : acc,
-          {}
-        );
-
-        if (photoshowAddedHeaders.namesPattern) {
-          const addedHeaderNamesPattern = new RegExp(`^(?:${photoshowAddedHeaders.namesPattern.join('|')})$`, 'i');
-
-          details.requestHeaders = details.requestHeaders.filter(({ name }) => !addedHeaderNamesPattern.test(name));
-          details.requestHeaders = details.requestHeaders.concat(photoshowAddedHeaders.headers);
-        }
-
-        break;
-
-      case 'main_frame':
-        if (TAB_ID_REFERER_MAPPTING[details.tabId]) {
-          details.requestHeaders.push({
-            name: 'referer',
-            value: TAB_ID_REFERER_MAPPTING[details.tabId]
-          });
-        }
-        break;
-
-      default:
-    }
-
-    return {
-      requestHeaders: details.requestHeaders
-    };
-  },
-  {
-    urls: Object.values(websiteConfig)
-      .filter(config => config.hasOwnProperty('xhrDownload') || config.hasOwnProperty('xhrCustomHeaders'))
-      .flatMap(config => [].concat(config.xhrDownload || [], config.xhrCustomHeaders || []))
-      .map(hostname => `*://${hostname}/*`),
-    types: ['xmlhttprequest', 'main_frame']
-  },
-  ['requestHeaders', 'blocking', 'extraHeaders']
-);
+// Manifest V3: the blocking webRequest listener (rewriting 'photoshow-added-*' custom
+// headers) was removed because blocking webRequest is unavailable in service workers.
+// Per-tab 'Referer' injection is now handled by declarativeNetRequest session rules
+// (see tools.setTabReferer). Site configs that relied on 'photoshow-added-*' header
+// spoofing degrade gracefully: the custom headers are simply ignored by servers.
 
 // Response to downloading actions.
+// Remove per-tab referer rules when their tabs close.
+chrome.tabs.onRemoved.addListener(tabId => {
+  chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [tabId] });
+});
+
 chrome.downloads.onChanged.addListener(downloadInfo => {
   const matchedDownloadItem = DOWNLOAD_ITMES[downloadInfo.id];
 
